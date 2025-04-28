@@ -3,6 +3,7 @@ package zttp
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"strings"
@@ -40,32 +41,55 @@ func handleClient(socket net.Conn, app *App) {
 	rdr := bufio.NewReader(socket)
 	requestLine, err := rdr.ReadString('\n')
 	if err != nil {
+		if err == io.EOF {
+			log.Println("connection closed by client")
+			return
+		}
+
 		log.Println("err reading from socket... " + err.Error())
+		return
 	}
 
+	requestLine = strings.TrimSpace(requestLine)
 	fmt.Println("Incoming request: " + requestLine)
+
+	if requestLine == "" {
+		log.Println("empty request line, ignoring")
+		return
+	}
+
+	requestParts := strings.SplitN(requestLine, " ", 3)
+	if len(requestParts) < 2 {
+		log.Println("invalid request line: " + requestLine)
+		sendResponse(socket, "Bad Request", 400)
+		return
+	}
 
 	_, contentLength := extractHeaders(rdr)
 
 	body := extractBody(rdr, contentLength)
 
-	requestParts := strings.Split(requestLine, " ")
 	method := requestParts[0]
 	endPoint := requestParts[1]
 
 	var handler Handler
 	var params map[string]string
 
-	if method == "GET" {
+	switch method {
+	case "GET":
 		handler, params = matchRoute(endPoint, app.getRoutes)
-	} else if method == "DELETE" {
+	case "DELETE":
 		handler, params = matchRoute(endPoint, app.deleteRoutes)
-	} else if method == "POST" {
+	case "POST":
 		handler, params = matchRoute(endPoint, app.postRoutes)
-	} else if method == "PUT" {
+	case "PUT":
 		handler, params = matchRoute(endPoint, app.putRoutes)
-	} else if method == "PATCH" {
+	case "PATCH":
 		handler, params = matchRoute(endPoint, app.patchRoutes)
+	default:
+		log.Println("unsupported method:", method)
+		sendResponse(socket, "Method Not Allowed", 405)
+		return
 	}
 
 	if handler != nil {

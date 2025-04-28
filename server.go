@@ -9,9 +9,12 @@ import (
 )
 
 type App struct {
-	getRoutes   []Route
-	postRoutes  []Route
-	middlewares []Middleware
+	getRoutes    []Route
+	postRoutes   []Route
+	deleteRoutes []Route
+	putRoutes    []Route
+	patchRoutes  []Route
+	middlewares  []Middleware
 }
 
 func (app *App) Start(port int) {
@@ -55,8 +58,14 @@ func handleClient(socket net.Conn, app *App) {
 
 	if method == "GET" {
 		handler, params = matchRoute(endPoint, app.getRoutes)
+	} else if method == "DELETE" {
+		handler, params = matchRoute(endPoint, app.deleteRoutes)
 	} else if method == "POST" {
 		handler, params = matchRoute(endPoint, app.postRoutes)
+	} else if method == "PUT" {
+		handler, params = matchRoute(endPoint, app.putRoutes)
+	} else if method == "PATCH" {
+		handler, params = matchRoute(endPoint, app.patchRoutes)
 	}
 
 	if handler != nil {

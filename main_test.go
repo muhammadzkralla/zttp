@@ -80,6 +80,23 @@ func TestGetRouteMatching(t *testing.T) {
 	}
 }
 
+// Test DELETE route matching
+func TestDeleteRouteMatching(t *testing.T) {
+	app := &App{}
+
+	// Mock a DELETE handler
+	app.Delete("/test", func(req Req, res Res) {
+		res.Send("DELETE route matched")
+	})
+
+	// Mock a DELETE request
+	response := mockRequest(app, "DELETE", "/test", "")
+
+	if !strings.Contains(response, "DELETE route matched") {
+		t.Errorf("Expected response to contain 'DELETE route matched', but got %s", response)
+	}
+}
+
 // Test POST route matching
 func TestPostRouteMatching(t *testing.T) {
 	app := &App{}
@@ -94,6 +111,40 @@ func TestPostRouteMatching(t *testing.T) {
 
 	if !strings.Contains(response, "POST route matched") {
 		t.Errorf("Expected response to contain 'POST route matched', but got %s", response)
+	}
+}
+
+// Test PUT route matching
+func TestPutRouteMatching(t *testing.T) {
+	app := &App{}
+
+	// Mock a PUT handler
+	app.Put("/test", func(req Req, res Res) {
+		res.Send("PUT route matched")
+	})
+
+	// Mock a PUT request
+	response := mockRequest(app, "PUT", "/test", "")
+
+	if !strings.Contains(response, "PUT route matched") {
+		t.Errorf("Expected response to contain 'PUT route matched', but got %s", response)
+	}
+}
+
+// Test PATCH route matching
+func TestPatchRouteMatching(t *testing.T) {
+	app := &App{}
+
+	// Mock a PATCH handler
+	app.Patch("/test", func(req Req, res Res) {
+		res.Send("PATCH route matched")
+	})
+
+	// Mock a PATCH request
+	response := mockRequest(app, "PATCH", "/test", "")
+
+	if !strings.Contains(response, "PATCH route matched") {
+		t.Errorf("Expected response to contain 'PATCH route matched', but got %s", response)
 	}
 }
 

@@ -6,8 +6,20 @@ func (app *App) Get(endpoint string, handler Handler) {
 	app.getRoutes = append(app.getRoutes, Route{endpoint, applyMiddleware(handler, app)})
 }
 
+func (app *App) Delete(endpoint string, handler Handler) {
+	app.deleteRoutes = append(app.deleteRoutes, Route{endpoint, applyMiddleware(handler, app)})
+}
+
 func (app *App) Post(endpoint string, handler Handler) {
 	app.postRoutes = append(app.postRoutes, Route{endpoint, applyMiddleware(handler, app)})
+}
+
+func (app *App) Put(endpoint string, handler Handler) {
+	app.putRoutes = append(app.putRoutes, Route{endpoint, applyMiddleware(handler, app)})
+}
+
+func (app *App) Patch(endpoint string, handler Handler) {
+	app.patchRoutes = append(app.patchRoutes, Route{endpoint, applyMiddleware(handler, app)})
 }
 
 func matchRoute(requestPath string, routes []Route) (Handler, map[string]string) {

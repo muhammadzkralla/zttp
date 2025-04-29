@@ -10,12 +10,13 @@ import (
 )
 
 type App struct {
-	getRoutes    []Route
-	postRoutes   []Route
-	deleteRoutes []Route
-	putRoutes    []Route
-	patchRoutes  []Route
-	middlewares  []Middleware
+	getRoutes       []Route
+	postRoutes      []Route
+	deleteRoutes    []Route
+	putRoutes       []Route
+	patchRoutes     []Route
+	middlewares     []Middleware
+	PrettyPrintJSON bool
 }
 
 func (app *App) Start(port int) {
@@ -101,8 +102,9 @@ func handleClient(socket net.Conn, app *App) {
 			Params: params,
 		}
 		res := Res{
-			Socket: socket,
-			Status: 200,
+			Socket:          socket,
+			Status:          200,
+			PrettyPrintJSON: app.PrettyPrintJSON,
 		}
 
 		handler(req, res)

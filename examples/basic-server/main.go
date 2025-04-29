@@ -13,7 +13,9 @@ type User struct {
 }
 
 func main() {
-	app := zttp.App{}
+	app := zttp.App{
+		PrettyPrintJSON: true,
+	}
 
 	app.Use(func(req zttp.Req, res zttp.Res, next func()) {
 		log.Printf("m1: Request: %s %s\n", req.Method, req.Path)

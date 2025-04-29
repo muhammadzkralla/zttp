@@ -8,8 +8,9 @@ import (
 )
 
 type Res struct {
-	Socket net.Conn
-	Status int
+	Socket          net.Conn
+	Status          int
+	PrettyPrintJSON bool
 }
 
 func (res *Res) Send(data string) {
@@ -17,8 +18,15 @@ func (res *Res) Send(data string) {
 }
 
 func (res *Res) Json(data any) {
-	// raw, err := json.MarshalIndent(data, "", "    ")
-	raw, err := json.Marshal(data)
+	var raw []byte
+	var err error
+
+	if res.PrettyPrintJSON {
+		raw, err = json.MarshalIndent(data, "", "    ")
+	} else {
+		raw, err = json.Marshal(data)
+	}
+
 	if err != nil {
 		log.Println("Error parsing json")
 		res.Send("Internal Server Error: JSON Marshal Failed")

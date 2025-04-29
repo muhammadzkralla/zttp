@@ -10,6 +10,12 @@ import (
 	"time"
 )
 
+// A template user struct for testing
+type User struct {
+	Name string `json:"name"`
+	Age  int    `json:"age"`
+}
+
 // Mock of net.Conn struct following the net.Conn interface specifications
 type MockConn struct {
 	data []byte
@@ -212,7 +218,7 @@ func TestSendResponse(t *testing.T) {
 	res.Send("OK")
 
 	// Expected response body
-	expected := "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Type: text/plain\r\n\r\nOK"
+	expected := "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Type: application/json\r\n\r\nOK"
 	if string(conn.data) != expected {
 		t.Errorf("Expected response %s, but got %s", expected, string(conn.data))
 	}
@@ -262,5 +268,49 @@ func TestNotFoundHandler(t *testing.T) {
 
 	if !strings.Contains(response, "Not Found") {
 		t.Errorf("Expected 'Not Found', but got %s", response)
+	}
+}
+
+func TestJson(t *testing.T) {
+	socket := &MockConn{}
+	res := &Res{
+		Socket: socket,
+		Status: 200,
+	}
+
+	user := User{
+		Name: "Zkrallah",
+		Age:  21,
+	}
+
+	res.Json(user)
+
+	output := string(socket.data)
+
+	if !strings.Contains(output, "Content-Type: application/json") {
+		t.Errorf("Expected JSON content type, but got %s", output)
+	}
+
+	if !strings.Contains(output, `"name":"Zkrallah"`) || !strings.Contains(output, `"age":21`) {
+		t.Errorf("Expected JSON body, but got %s", output)
+	}
+}
+
+func TestParseJson(t *testing.T) {
+	// Mock an incoming json request
+	body := `{"name":"Zkrallah","age":21}`
+	req := Req{
+		Body: body,
+	}
+
+	// attempt parsing the request json into the user struct object
+	var user User
+	err := req.ParseJson(&user)
+	if err != nil {
+		t.Errorf("Expected no error while parsing json, got %v", err)
+	}
+
+	if user.Name != "Zkrallah" || user.Age != 21 {
+		t.Errorf("Expected no error while parsing json, got %v", err)
 	}
 }

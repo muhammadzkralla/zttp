@@ -56,6 +56,7 @@ func handleClient(socket net.Conn, app *App) {
 	if requestLine == "" {
 		log.Println("empty request line, sending 'Bad Request' response")
 		sendResponse(socket, "Bad Request", 400)
+		return
 	}
 
 	requestParts := strings.SplitN(requestLine, " ", 3)

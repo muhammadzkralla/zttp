@@ -2,6 +2,7 @@ package zttp
 
 import (
 	"bufio"
+	"encoding/json"
 	"io"
 	"log"
 	"strconv"
@@ -13,6 +14,10 @@ type Req struct {
 	Path   string
 	Body   string
 	Params map[string]string
+}
+
+func (req *Req) ParseJson(target any) error {
+	return json.Unmarshal([]byte(req.Body), target)
 }
 
 func extractHeaders(rdr *bufio.Reader) ([]string, int) {

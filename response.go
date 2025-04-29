@@ -1,7 +1,9 @@
 package zttp
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 )
 
@@ -14,11 +16,23 @@ func (res *Res) Send(data string) {
 	sendResponse(res.Socket, data, res.Status)
 }
 
+func (res *Res) Json(data any) {
+	// raw, err := json.MarshalIndent(data, "", "    ")
+	raw, err := json.Marshal(data)
+	if err != nil {
+		log.Println("Error parsing json")
+		res.Send("Internal Server Error: JSON Marshal Failed")
+		return
+	}
+
+	sendResponse(res.Socket, string(raw), res.Status)
+}
+
 func sendResponse(socket net.Conn, body string, code int) {
 	statusMessage := getHTTPStatusMessage(code)
 	fmt.Fprintf(socket, "HTTP/1.1 %d %s\r\n", code, statusMessage)
 	fmt.Fprintf(socket, "Content-Length: %d\r\n", len(body))
-	fmt.Fprintf(socket, "Content-Type: text/plain\r\n")
+	fmt.Fprintf(socket, "Content-Type: application/json\r\n")
 	fmt.Fprintf(socket, "\r\n")
 	fmt.Fprintf(socket, "%s", body)
 }

@@ -1,5 +1,7 @@
 package zttp
 
+type Middleware func(req Req, res Res, next func())
+
 func (app *App) Use(m Middleware) {
 	app.middlewares = append(app.middlewares, m)
 }

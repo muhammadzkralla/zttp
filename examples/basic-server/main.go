@@ -104,5 +104,15 @@ func main() {
 		res.Json(user)
 	})
 
+	app.Get("/user", func(req zttp.Req, res zttp.Res) {
+		queries := req.Queries
+		var response string
+
+		for k, v := range queries {
+			response = response + k + ": " + v + "\n"
+		}
+		res.Send(response)
+	})
+
 	app.Start(1069)
 }

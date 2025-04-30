@@ -72,22 +72,31 @@ func handleClient(socket net.Conn, app *App) {
 	body := extractBody(rdr, contentLength)
 
 	method := requestParts[0]
-	endPoint := requestParts[1]
+	rawPath := requestParts[1]
+
+	path := rawPath
+	queries := make(map[string]string)
+
+	if strings.Contains(rawPath, "?") {
+		split := strings.SplitN(rawPath, "?", 2)
+		path = split[0]
+		queries = parseQueries(split[1])
+	}
 
 	var handler Handler
 	var params map[string]string
 
 	switch method {
 	case "GET":
-		handler, params = matchRoute(endPoint, app.getRoutes)
+		handler, params = matchRoute(path, app.getRoutes)
 	case "DELETE":
-		handler, params = matchRoute(endPoint, app.deleteRoutes)
+		handler, params = matchRoute(path, app.deleteRoutes)
 	case "POST":
-		handler, params = matchRoute(endPoint, app.postRoutes)
+		handler, params = matchRoute(path, app.postRoutes)
 	case "PUT":
-		handler, params = matchRoute(endPoint, app.putRoutes)
+		handler, params = matchRoute(path, app.putRoutes)
 	case "PATCH":
-		handler, params = matchRoute(endPoint, app.patchRoutes)
+		handler, params = matchRoute(path, app.patchRoutes)
 	default:
 		log.Println("unsupported method:", method)
 		sendResponse(socket, "Method Not Allowed", 405, "text/plain")
@@ -96,10 +105,11 @@ func handleClient(socket net.Conn, app *App) {
 
 	if handler != nil {
 		req := Req{
-			Method: method,
-			Path:   endPoint,
-			Body:   body,
-			Params: params,
+			Method:  method,
+			Path:    path,
+			Body:    body,
+			Params:  params,
+			Queries: queries,
 		}
 		res := Res{
 			Socket:          socket,

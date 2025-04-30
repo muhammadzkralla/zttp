@@ -21,6 +21,10 @@ func (req *Req) ParseJson(target any) error {
 	return json.Unmarshal([]byte(req.Body), target)
 }
 
+func (req *Req) Query(key string) string {
+	return req.Queries[key]
+}
+
 func parseQueries(raw string) map[string]string {
 	queries := make(map[string]string)
 

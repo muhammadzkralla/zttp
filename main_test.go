@@ -363,3 +363,25 @@ func TestParseQueries(t *testing.T) {
 		t.Errorf("Error in parsing third query")
 	}
 }
+
+func TestParseQuery(t *testing.T) {
+	queries := map[string]string{
+		"userId":   "2",
+		"name":     "zkrallah",
+		"category": "admin",
+	}
+
+	req := Req{
+		Queries: queries,
+	}
+
+	q1 := req.Query("userId")
+	q2 := req.Query("name")
+	q3 := req.Query("category")
+	q4 := req.Query("unknown")
+
+	if q1 != "2" || q2 != "zkrallah" || q3 != "admin" || q4 != "" {
+		t.Error("Error parsing queries")
+	}
+
+}

@@ -67,7 +67,7 @@ func handleClient(socket net.Conn, app *App) {
 		return
 	}
 
-	_, contentLength := extractHeaders(rdr)
+	headers, contentLength := extractHeaders(rdr)
 
 	body := extractBody(rdr, contentLength)
 
@@ -80,7 +80,7 @@ func handleClient(socket net.Conn, app *App) {
 	if strings.Contains(rawPath, "?") {
 		split := strings.SplitN(rawPath, "?", 2)
 		path = split[0]
-		queries = parseQueries(split[1])
+		queries = extractQueries(split[1])
 	}
 
 	var handler Handler
@@ -108,6 +108,7 @@ func handleClient(socket net.Conn, app *App) {
 			Method:  method,
 			Path:    path,
 			Body:    body,
+			Headers: headers,
 			Params:  params,
 			Queries: queries,
 		}

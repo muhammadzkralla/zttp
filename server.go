@@ -56,14 +56,14 @@ func handleClient(socket net.Conn, app *App) {
 
 	if requestLine == "" {
 		log.Println("empty request line, sending 'Bad Request' response")
-		sendResponse(socket, "Bad Request", 400, "text/plain")
+		sendResponse(socket, "Bad Request", 400, "text/plain", nil)
 		return
 	}
 
 	requestParts := strings.SplitN(requestLine, " ", 3)
 	if len(requestParts) < 2 {
 		log.Println("invalid request line: " + requestLine)
-		sendResponse(socket, "Bad Request", 400, "text/plain")
+		sendResponse(socket, "Bad Request", 400, "text/plain", nil)
 		return
 	}
 
@@ -99,7 +99,7 @@ func handleClient(socket net.Conn, app *App) {
 		handler, params = matchRoute(path, app.patchRoutes)
 	default:
 		log.Println("unsupported method:", method)
-		sendResponse(socket, "Method Not Allowed", 405, "text/plain")
+		sendResponse(socket, "Method Not Allowed", 405, "text/plain", nil)
 		return
 	}
 
@@ -115,11 +115,12 @@ func handleClient(socket net.Conn, app *App) {
 		res := Res{
 			Socket:          socket,
 			Status:          200,
+			Headers: make(map[string]string),
 			PrettyPrintJSON: app.PrettyPrintJSON,
 		}
 
 		handler(req, res)
 	} else {
-		sendResponse(socket, "Not Found", 404, "text/plain")
+		sendResponse(socket, "Not Found", 404, "text/plain", nil)
 	}
 }

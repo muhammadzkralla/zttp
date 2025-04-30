@@ -264,7 +264,7 @@ func TestExtractHeader(t *testing.T) {
 	h5 := req.Header("unknown")
 
 	if h1 != "application/json" || h2 != "20" || h3 != "header1" || h4 != "header2" || h5 != "" {
-		t.Error("Error parsing headers")
+		t.Errorf("Error parsing headers")
 	}
 }
 
@@ -404,6 +404,23 @@ func TestParseQuery(t *testing.T) {
 	q4 := req.Query("unknown")
 
 	if q1 != "2" || q2 != "zkrallah" || q3 != "admin" || q4 != "" {
-		t.Error("Error parsing queries")
+		t.Errorf("Error parsing queries")
+	}
+}
+
+func TestSetResponseHeaders(t *testing.T) {
+	conn := &MockConn{}
+
+	res := Res{
+		Socket:  conn,
+		Headers: make(map[string]string),
+	}
+
+	res.Set("Header1", "header1")
+	res.Set("Header1", "notheader1")
+	res.Set("Header2", "header2")
+
+	if res.Headers["Header1"] != "notheader1" || res.Headers["Header2"] != "header2" {
+		t.Errorf("Error setting response headers")
 	}
 }

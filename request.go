@@ -10,14 +10,41 @@ import (
 )
 
 type Req struct {
-	Method string
-	Path   string
-	Body   string
-	Params map[string]string
+	Method  string
+	Path    string
+	Body    string
+	Params  map[string]string
+	Queries map[string]string
 }
 
 func (req *Req) ParseJson(target any) error {
 	return json.Unmarshal([]byte(req.Body), target)
+}
+
+func (req *Req) Query(key string) string {
+	return req.Queries[key]
+}
+
+func parseQueries(raw string) map[string]string {
+	queries := make(map[string]string)
+
+	if raw == "" {
+		return queries
+	}
+
+	pairs := strings.SplitSeq(raw, "&")
+
+	for pair := range pairs {
+		parts := strings.SplitN(pair, "=", 2)
+		key := parts[0]
+		value := ""
+		if len(parts) > 1 {
+			value = parts[1]
+		}
+		queries[key] = value
+	}
+
+	return queries
 }
 
 func extractHeaders(rdr *bufio.Reader) ([]string, int) {

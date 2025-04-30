@@ -9,7 +9,7 @@ import (
 
 type Res struct {
 	Socket          net.Conn
-	Status          int
+	StatusCode      int
 	Headers         map[string]string
 	ContentType     string
 	PrettyPrintJSON bool
@@ -20,7 +20,7 @@ func (res *Res) Send(data string) {
 		res.ContentType = "text/plain; charset=utf-8"
 	}
 
-	sendResponse(res.Socket, data, res.Status, res.ContentType, res.Headers)
+	sendResponse(res.Socket, data, res.StatusCode, res.ContentType, res.Headers)
 }
 
 func (res *Res) Json(data any) {
@@ -35,17 +35,22 @@ func (res *Res) Json(data any) {
 
 	if err != nil {
 		log.Println("Error parsing json")
-		res.Status = 500
+		res.StatusCode = 500
 		res.Send("Internal Server Error: JSON Marshal Failed")
 		return
 	}
 
 	res.ContentType = "application/json"
-	sendResponse(res.Socket, string(raw), res.Status, res.ContentType, res.Headers)
+	sendResponse(res.Socket, string(raw), res.StatusCode, res.ContentType, res.Headers)
 }
 
 func (res *Res) Set(key, value string) {
 	res.Headers[key] = value
+}
+
+func (res *Res) Status(code int) *Res {
+	res.StatusCode = code
+	return res
 }
 
 func sendResponse(socket net.Conn, body string, code int, contentType string, headers map[string]string) {

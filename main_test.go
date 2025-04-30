@@ -211,8 +211,8 @@ func TestSendResponse(t *testing.T) {
 	conn := &MockConn{}
 
 	res := Res{
-		Socket: conn,
-		Status: 200,
+		Socket:     conn,
+		StatusCode: 200,
 	}
 
 	res.Send("OK")
@@ -233,8 +233,8 @@ func TestSendJsonResponse(t *testing.T) {
 	}
 
 	res := Res{
-		Socket: conn,
-		Status: 200,
+		Socket:     conn,
+		StatusCode: 200,
 	}
 
 	res.Json(data)
@@ -257,11 +257,11 @@ func TestExtractHeader(t *testing.T) {
 		Headers: headers,
 	}
 
-	h1 := req.Header("Content-Type")
-	h2 := req.Header("Content-Length")
-	h3 := req.Header("Header1")
-	h4 := req.Header("Header2")
-	h5 := req.Header("unknown")
+	h1 := req.Get("Content-Type")
+	h2 := req.Get("Content-Length")
+	h3 := req.Get("Header1")
+	h4 := req.Get("Header2")
+	h5 := req.Get("unknown")
 
 	if h1 != "application/json" || h2 != "20" || h3 != "header1" || h4 != "header2" || h5 != "" {
 		t.Errorf("Error parsing headers")
@@ -318,8 +318,8 @@ func TestNotFoundHandler(t *testing.T) {
 func TestJson(t *testing.T) {
 	socket := &MockConn{}
 	res := &Res{
-		Socket: socket,
-		Status: 200,
+		Socket:     socket,
+		StatusCode: 200,
 	}
 
 	user := User{
@@ -409,10 +409,7 @@ func TestParseQuery(t *testing.T) {
 }
 
 func TestSetResponseHeaders(t *testing.T) {
-	conn := &MockConn{}
-
 	res := Res{
-		Socket:  conn,
 		Headers: make(map[string]string),
 	}
 
@@ -422,5 +419,24 @@ func TestSetResponseHeaders(t *testing.T) {
 
 	if res.Headers["Header1"] != "notheader1" || res.Headers["Header2"] != "header2" {
 		t.Errorf("Error setting response headers")
+	}
+}
+
+func TestSetStatusCode(t *testing.T) {
+	res := &Res{}
+	res.Status(500)
+	if res.StatusCode != 500 {
+		t.Errorf("Error setting status code to 500")
+	}
+
+	res.Status(400)
+	res.Status(301)
+	if res.StatusCode != 301 {
+		t.Errorf("Error setting status code to 301")
+	}
+
+	res.Status(404)
+	if res.StatusCode != 404 {
+		t.Errorf("Error setting status code to 404")
 	}
 }

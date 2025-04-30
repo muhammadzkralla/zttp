@@ -218,9 +218,30 @@ func TestSendResponse(t *testing.T) {
 	res.Send("OK")
 
 	// Expected response body
-	expected := "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Type: application/json\r\n\r\nOK"
+	expected := "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nOK"
 	if string(conn.data) != expected {
 		t.Errorf("Expected response %s, but got %s", expected, string(conn.data))
+	}
+}
+
+func TestSendJsonResponse(t *testing.T) {
+	// Mock a socket
+	conn := &MockConn{}
+
+	data := map[string]string{
+		"message": "OK",
+	}
+
+	res := Res{
+		Socket: conn,
+		Status: 200,
+	}
+
+	res.Json(data)
+
+	// Expected response body
+	if !strings.Contains(string(conn.data), `"message":"OK"`) {
+		t.Errorf("Expected JSON response, but got %s", string(conn.data))
 	}
 }
 

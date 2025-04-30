@@ -11,10 +11,15 @@ type Res struct {
 	Socket          net.Conn
 	Status          int
 	PrettyPrintJSON bool
+	ContentType     string
 }
 
 func (res *Res) Send(data string) {
-	sendResponse(res.Socket, data, res.Status)
+	if res.ContentType == "" {
+		res.ContentType = "text/plain; charset=utf-8"
+	}
+
+	sendResponse(res.Socket, data, res.Status, res.ContentType)
 }
 
 func (res *Res) Json(data any) {
@@ -29,18 +34,20 @@ func (res *Res) Json(data any) {
 
 	if err != nil {
 		log.Println("Error parsing json")
+		res.Status = 500
 		res.Send("Internal Server Error: JSON Marshal Failed")
 		return
 	}
 
-	sendResponse(res.Socket, string(raw), res.Status)
+	res.ContentType = "application/json"
+	sendResponse(res.Socket, string(raw), res.Status, res.ContentType)
 }
 
-func sendResponse(socket net.Conn, body string, code int) {
+func sendResponse(socket net.Conn, body string, code int, contentType string) {
 	statusMessage := getHTTPStatusMessage(code)
 	fmt.Fprintf(socket, "HTTP/1.1 %d %s\r\n", code, statusMessage)
 	fmt.Fprintf(socket, "Content-Length: %d\r\n", len(body))
-	fmt.Fprintf(socket, "Content-Type: application/json\r\n")
+	fmt.Fprintf(socket, "Content-Type: %s\r\n", contentType)
 	fmt.Fprintf(socket, "\r\n")
 	fmt.Fprintf(socket, "%s", body)
 }

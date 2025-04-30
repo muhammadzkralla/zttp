@@ -335,3 +335,53 @@ func TestParseJson(t *testing.T) {
 		t.Errorf("Expected no error while parsing json, got %v", err)
 	}
 }
+
+func TestParseQueries(t *testing.T) {
+	q1 := "userId=2&name=zkrallah&category=admin"
+	q2 := "userId=1&category=teacher&limit=2"
+	q3 := "userId=1&category="
+	q4 := ""
+
+	qs1 := parseQueries(q1)
+	qs2 := parseQueries(q2)
+	qs3 := parseQueries(q3)
+	qs4 := parseQueries(q4)
+
+	if len(qs1) != 3 || len(qs2) != 3 || len(qs3) != 2 || len(qs4) != 0 {
+		t.Errorf("Sizes are not correct: %d", len(qs4))
+	}
+
+	if qs1["userId"] != "2" || qs1["name"] != "zkrallah" || qs1["category"] != "admin" {
+		t.Errorf("Error in parsing first query")
+	}
+
+	if qs2["userId"] != "1" || qs2["category"] != "teacher" || qs2["limit"] != "2" {
+		t.Errorf("Error in parsing second query")
+	}
+
+	if qs3["userId"] != "1" || qs3["category"] != "" {
+		t.Errorf("Error in parsing third query")
+	}
+}
+
+func TestParseQuery(t *testing.T) {
+	queries := map[string]string{
+		"userId":   "2",
+		"name":     "zkrallah",
+		"category": "admin",
+	}
+
+	req := Req{
+		Queries: queries,
+	}
+
+	q1 := req.Query("userId")
+	q2 := req.Query("name")
+	q3 := req.Query("category")
+	q4 := req.Query("unknown")
+
+	if q1 != "2" || q2 != "zkrallah" || q3 != "admin" || q4 != "" {
+		t.Error("Error parsing queries")
+	}
+
+}

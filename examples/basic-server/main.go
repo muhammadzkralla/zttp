@@ -7,8 +7,15 @@ import (
 	"github.com/muhammadzkralla/zttp"
 )
 
+type User struct {
+	Name string `json:"name"`
+	Age  int    `json:"age"`
+}
+
 func main() {
-	app := zttp.App{}
+	app := zttp.App{
+		PrettyPrintJSON: true,
+	}
 
 	app.Use(func(req zttp.Req, res zttp.Res, next func()) {
 		log.Printf("m1: Request: %s %s\n", req.Method, req.Path)
@@ -83,6 +90,18 @@ func main() {
 		response := fmt.Sprintf("Patched post id %s and comment id %s with %s", postId, commentId, req.Body)
 		res.Status = 201
 		res.Send(response)
+	})
+
+	app.Post("/user", func(req zttp.Req, res zttp.Res) {
+		var user User
+		err := req.ParseJson(&user)
+		if err != nil {
+			res.Status = 400
+			res.Send("Invalid JSON")
+			return
+		}
+
+		res.Json(user)
 	})
 
 	app.Start(1069)

@@ -10,12 +10,13 @@ import (
 )
 
 type App struct {
-	getRoutes    []Route
-	postRoutes   []Route
-	deleteRoutes []Route
-	putRoutes    []Route
-	patchRoutes  []Route
-	middlewares  []Middleware
+	getRoutes       []Route
+	postRoutes      []Route
+	deleteRoutes    []Route
+	putRoutes       []Route
+	patchRoutes     []Route
+	middlewares     []Middleware
+	PrettyPrintJSON bool
 }
 
 func (app *App) Start(port int) {
@@ -55,13 +56,14 @@ func handleClient(socket net.Conn, app *App) {
 
 	if requestLine == "" {
 		log.Println("empty request line, sending 'Bad Request' response")
-		sendResponse(socket, "Bad Request", 400)
+		sendResponse(socket, "Bad Request", 400, "text/plain")
+		return
 	}
 
 	requestParts := strings.SplitN(requestLine, " ", 3)
 	if len(requestParts) < 2 {
 		log.Println("invalid request line: " + requestLine)
-		sendResponse(socket, "Bad Request", 400)
+		sendResponse(socket, "Bad Request", 400, "text/plain")
 		return
 	}
 
@@ -88,7 +90,7 @@ func handleClient(socket net.Conn, app *App) {
 		handler, params = matchRoute(endPoint, app.patchRoutes)
 	default:
 		log.Println("unsupported method:", method)
-		sendResponse(socket, "Method Not Allowed", 405)
+		sendResponse(socket, "Method Not Allowed", 405, "text/plain")
 		return
 	}
 
@@ -100,12 +102,13 @@ func handleClient(socket net.Conn, app *App) {
 			Params: params,
 		}
 		res := Res{
-			Socket: socket,
-			Status: 200,
+			Socket:          socket,
+			Status:          200,
+			PrettyPrintJSON: app.PrettyPrintJSON,
 		}
 
 		handler(req, res)
 	} else {
-		sendResponse(socket, "Not Found", 404)
+		sendResponse(socket, "Not Found", 404, "text/plain")
 	}
 }

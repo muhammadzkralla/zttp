@@ -1,24 +1,53 @@
 package zttp
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 )
 
 type Res struct {
-	Socket net.Conn
-	Status int
+	Socket          net.Conn
+	Status          int
+	PrettyPrintJSON bool
+	ContentType     string
 }
 
 func (res *Res) Send(data string) {
-	sendResponse(res.Socket, data, res.Status)
+	if res.ContentType == "" {
+		res.ContentType = "text/plain; charset=utf-8"
+	}
+
+	sendResponse(res.Socket, data, res.Status, res.ContentType)
 }
 
-func sendResponse(socket net.Conn, body string, code int) {
+func (res *Res) Json(data any) {
+	var raw []byte
+	var err error
+
+	if res.PrettyPrintJSON {
+		raw, err = json.MarshalIndent(data, "", "    ")
+	} else {
+		raw, err = json.Marshal(data)
+	}
+
+	if err != nil {
+		log.Println("Error parsing json")
+		res.Status = 500
+		res.Send("Internal Server Error: JSON Marshal Failed")
+		return
+	}
+
+	res.ContentType = "application/json"
+	sendResponse(res.Socket, string(raw), res.Status, res.ContentType)
+}
+
+func sendResponse(socket net.Conn, body string, code int, contentType string) {
 	statusMessage := getHTTPStatusMessage(code)
 	fmt.Fprintf(socket, "HTTP/1.1 %d %s\r\n", code, statusMessage)
 	fmt.Fprintf(socket, "Content-Length: %d\r\n", len(body))
-	fmt.Fprintf(socket, "Content-Type: text/plain\r\n")
+	fmt.Fprintf(socket, "Content-Type: %s\r\n", contentType)
 	fmt.Fprintf(socket, "\r\n")
 	fmt.Fprintf(socket, "%s", body)
 }

@@ -50,7 +50,7 @@ func main() {
 	app.Post("/home", func(req zttp.Req, res zttp.Res) {
 		reqBody := req.Body
 		response := "You sent: " + reqBody
-		res.Status = 201
+		res.StatusCode = 201
 		res.Send(response)
 	})
 
@@ -58,14 +58,14 @@ func main() {
 		postId := req.Params["postId"]
 		commentId := req.Params["commentId"]
 		response := fmt.Sprintf("Posted %s for post id %s and comment id %s", req.Body, postId, commentId)
-		res.Status = 201
+		res.StatusCode = 201
 		res.Send(response)
 	})
 
 	app.Put("/home", func(req zttp.Req, res zttp.Res) {
 		reqBody := req.Body
 		response := "Updated home with: " + reqBody
-		res.Status = 201
+		res.StatusCode = 201
 		res.Send(response)
 	})
 
@@ -73,14 +73,14 @@ func main() {
 		postId := req.Params["postId"]
 		commentId := req.Params["commentId"]
 		response := fmt.Sprintf("Updated post id %s and comment id %s with %s", postId, commentId, req.Body)
-		res.Status = 201
+		res.StatusCode = 201
 		res.Send(response)
 	})
 
 	app.Patch("/home", func(req zttp.Req, res zttp.Res) {
 		reqBody := req.Body
 		response := "Patched home with: " + reqBody
-		res.Status = 201
+		res.StatusCode = 201
 		res.Send(response)
 	})
 
@@ -88,7 +88,7 @@ func main() {
 		postId := req.Params["postId"]
 		commentId := req.Params["commentId"]
 		response := fmt.Sprintf("Patched post id %s and comment id %s with %s", postId, commentId, req.Body)
-		res.Status = 201
+		res.StatusCode = 201
 		res.Send(response)
 	})
 
@@ -96,7 +96,7 @@ func main() {
 		var user User
 		err := req.ParseJson(&user)
 		if err != nil {
-			res.Status = 400
+			res.StatusCode = 400
 			res.Send("Invalid JSON")
 			return
 		}
@@ -130,12 +130,28 @@ func main() {
 		res.Send(response)
 	})
 
+	app.Get("/get/header", func(req zttp.Req, res zttp.Res) {
+		h1 := req.Get("Header1")
+		h2 := req.Get("Header2")
+
+		var response string
+
+		response = response + "h1 value: " + h1 + "\n"
+		response = response + "h2 value: " + h2 + "\n"
+
+		res.Send(response)
+	})
+
 	app.Get("/set/header", func(req zttp.Req, res zttp.Res) {
 		res.Set("Header1", "header1")
 		res.Set("Header1", "notheader1")
 		res.Set("Header2", "header2")
 
 		res.Send("ok")
+	})
+
+	app.Get("/set/status", func(req zttp.Req, res zttp.Res) {
+		res.Status(400).Send("Bad Request Manually")
 	})
 
 	app.Start(1069)

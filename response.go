@@ -10,8 +10,9 @@ import (
 type Res struct {
 	Socket          net.Conn
 	Status          int
-	PrettyPrintJSON bool
+	Headers         map[string]string
 	ContentType     string
+	PrettyPrintJSON bool
 }
 
 func (res *Res) Send(data string) {
@@ -19,7 +20,7 @@ func (res *Res) Send(data string) {
 		res.ContentType = "text/plain; charset=utf-8"
 	}
 
-	sendResponse(res.Socket, data, res.Status, res.ContentType)
+	sendResponse(res.Socket, data, res.Status, res.ContentType, res.Headers)
 }
 
 func (res *Res) Json(data any) {
@@ -40,14 +41,23 @@ func (res *Res) Json(data any) {
 	}
 
 	res.ContentType = "application/json"
-	sendResponse(res.Socket, string(raw), res.Status, res.ContentType)
+	sendResponse(res.Socket, string(raw), res.Status, res.ContentType, res.Headers)
 }
 
-func sendResponse(socket net.Conn, body string, code int, contentType string) {
+func (res *Res) Set(key, value string) {
+	res.Headers[key] = value
+}
+
+func sendResponse(socket net.Conn, body string, code int, contentType string, headers map[string]string) {
 	statusMessage := getHTTPStatusMessage(code)
 	fmt.Fprintf(socket, "HTTP/1.1 %d %s\r\n", code, statusMessage)
 	fmt.Fprintf(socket, "Content-Length: %d\r\n", len(body))
 	fmt.Fprintf(socket, "Content-Type: %s\r\n", contentType)
+	if headers != nil {
+		for k, v := range headers {
+			fmt.Fprintf(socket, "%s: %s\r\n", k, v)
+		}
+	}
 	fmt.Fprintf(socket, "\r\n")
 	fmt.Fprintf(socket, "%s", body)
 }

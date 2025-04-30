@@ -245,6 +245,29 @@ func TestSendJsonResponse(t *testing.T) {
 	}
 }
 
+func TestExtractHeader(t *testing.T) {
+	headers := map[string]string{
+		"Content-Type":   "application/json",
+		"Content-Length": "20",
+		"Header1":        "header1",
+		"Header2":        "header2",
+	}
+
+	req := Req{
+		Headers: headers,
+	}
+
+	h1 := req.Header("Content-Type")
+	h2 := req.Header("Content-Length")
+	h3 := req.Header("Header1")
+	h4 := req.Header("Header2")
+	h5 := req.Header("unknown")
+
+	if h1 != "application/json" || h2 != "20" || h3 != "header1" || h4 != "header2" || h5 != "" {
+		t.Errorf("Error parsing headers")
+	}
+}
+
 func TestExtractHeaders(t *testing.T) {
 	// Mock some headers and create a bufio reader of them
 	headers := "Content-Length: 20\r\nHeader1: header1\r\nHeader2: header2\r\n\r\n"
@@ -252,16 +275,16 @@ func TestExtractHeaders(t *testing.T) {
 
 	extractedHeaders, extractedLen := extractHeaders(rdr)
 
-	if extractedHeaders[0] != "Content-Length: 20" {
-		t.Errorf("Expected header 'Content-Length: 20', but got %s", extractedHeaders[0])
+	if extractedHeaders["Content-Length"] != "20" {
+		t.Errorf("Expected header 'Content-Length: 20', but got %s", extractedHeaders["Content-Length"])
 	}
 
-	if extractedHeaders[1] != "Header1: header1" {
-		t.Errorf("Expected header 'Header1: header1', but got %s", extractedHeaders[1])
+	if extractedHeaders["Header1"] != "header1" {
+		t.Errorf("Expected header 'Header1: header1', but got %s", extractedHeaders["Header1"])
 	}
 
-	if extractedHeaders[2] != "Header2: header2" {
-		t.Errorf("Expected header 'Header2: header2', but got %s", extractedHeaders[2])
+	if extractedHeaders["Header2"] != "header2" {
+		t.Errorf("Expected header 'Header2: header2', but got %s", extractedHeaders["Header2"])
 	}
 
 	if extractedLen != 20 {
@@ -342,10 +365,10 @@ func TestParseQueries(t *testing.T) {
 	q3 := "userId=1&category="
 	q4 := ""
 
-	qs1 := parseQueries(q1)
-	qs2 := parseQueries(q2)
-	qs3 := parseQueries(q3)
-	qs4 := parseQueries(q4)
+	qs1 := extractQueries(q1)
+	qs2 := extractQueries(q2)
+	qs3 := extractQueries(q3)
+	qs4 := extractQueries(q4)
 
 	if len(qs1) != 3 || len(qs2) != 3 || len(qs3) != 2 || len(qs4) != 0 {
 		t.Errorf("Sizes are not correct: %d", len(qs4))
@@ -381,7 +404,23 @@ func TestParseQuery(t *testing.T) {
 	q4 := req.Query("unknown")
 
 	if q1 != "2" || q2 != "zkrallah" || q3 != "admin" || q4 != "" {
-		t.Error("Error parsing queries")
+		t.Errorf("Error parsing queries")
+	}
+}
+
+func TestSetResponseHeaders(t *testing.T) {
+	conn := &MockConn{}
+
+	res := Res{
+		Socket:  conn,
+		Headers: make(map[string]string),
 	}
 
+	res.Set("Header1", "header1")
+	res.Set("Header1", "notheader1")
+	res.Set("Header2", "header2")
+
+	if res.Headers["Header1"] != "notheader1" || res.Headers["Header2"] != "header2" {
+		t.Errorf("Error setting response headers")
+	}
 }

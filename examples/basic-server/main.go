@@ -130,5 +130,13 @@ func main() {
 		res.Send(response)
 	})
 
+	app.Get("/set/header", func(req zttp.Req, res zttp.Res) {
+		res.Set("Header1", "header1")
+		res.Set("Header1", "notheader1")
+		res.Set("Header2", "header2")
+
+		res.Send("ok")
+	})
+
 	app.Start(1069)
 }

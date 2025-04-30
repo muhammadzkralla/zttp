@@ -22,7 +22,7 @@ func main() {
 		next()
 	})
 
-	app.Use(func(req zttp.Req, res zttp.Res, next func()) {
+	app.Use("/home", func(req zttp.Req, res zttp.Res, next func()) {
 		log.Printf("m2: Request: %s %s\n\n", req.Method, req.Path)
 		next()
 	})

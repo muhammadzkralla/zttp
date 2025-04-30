@@ -158,21 +158,41 @@ func TestPatchRouteMatching(t *testing.T) {
 func TestMiddleware(t *testing.T) {
 	app := &App{}
 
-	// Mock a middleware
+	// Global middleware
 	app.Use(func(req Req, res Res, next func()) {
-		res.Send("Middleware worked")
+		res.Send("GlobalMiddleware\n")
 		next()
 	})
 
-	// Mock a handler
-	app.Get("/test", func(req Req, res Res) {
-
+	// Path-specific middleware
+	app.Use("/api", func(req Req, res Res, next func()) {
+		res.Send("ApiMiddleware\n")
+		next()
 	})
 
-	response := mockRequest(app, "GET", "/test", "")
+	// /test should only trigger global middleware
+	app.Get("/test", func(req Req, res Res) {
+		res.Send("Handler: /test")
+	})
 
-	if !strings.Contains(response, "Middleware worked") {
-		t.Errorf("Expected response to contain 'Middleware worked', but got %s", response)
+	// /api should trigger both global and /api middleware
+	app.Get("/api", func(req Req, res Res) {
+		res.Send("Handler: /api")
+	})
+
+	// Test /test
+	response1 := mockRequest(app, "GET", "/test", "")
+	if !strings.Contains(response1, "GlobalMiddleware") {
+		t.Errorf("Expected global middleware for /test, got: %s", response1)
+	}
+	if strings.Contains(response1, "ApiMiddleware") {
+		t.Errorf("Did not expect /api middleware for /test, got: %s", response1)
+	}
+
+	// Test /api
+	response2 := mockRequest(app, "GET", "/api", "")
+	if !strings.Contains(response2, "GlobalMiddleware") || !strings.Contains(response2, "ApiMiddleware") {
+		t.Errorf("Expected both middlewares for /api, got: %s", response2)
 	}
 }
 

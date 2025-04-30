@@ -2,6 +2,13 @@ package zttp
 
 import "strings"
 
+type Route struct {
+	path    string
+	handler Handler
+}
+
+type Handler func(req Req, res Res)
+
 func (app *App) Get(endpoint string, handler Handler) {
 	app.getRoutes = append(app.getRoutes, Route{endpoint, applyMiddleware(handler, app)})
 }

@@ -15,7 +15,7 @@ type App struct {
 	deleteRoutes    []Route
 	putRoutes       []Route
 	patchRoutes     []Route
-	middlewares     []Middleware
+	middlewares     []MiddlewareWrapper
 	PrettyPrintJSON bool
 }
 
@@ -114,7 +114,7 @@ func handleClient(socket net.Conn, app *App) {
 		}
 		res := Res{
 			Socket:          socket,
-			StatusCode:          200,
+			StatusCode:      200,
 			Headers:         make(map[string]string),
 			PrettyPrintJSON: app.PrettyPrintJSON,
 		}

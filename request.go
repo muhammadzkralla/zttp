@@ -18,7 +18,7 @@ type Req struct {
 	Queries map[string]string
 }
 
-func (req *Req) Get(key string) string {
+func (req *Req) Header(key string) string {
 	return req.Headers[key]
 }
 

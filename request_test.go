@@ -19,11 +19,11 @@ func TestExtractHeader(t *testing.T) {
 		Headers: headers,
 	}
 
-	h1 := req.Get("Content-Type")
-	h2 := req.Get("Content-Length")
-	h3 := req.Get("Header1")
-	h4 := req.Get("Header2")
-	h5 := req.Get("unknown")
+	h1 := req.Header("Content-Type")
+	h2 := req.Header("Content-Length")
+	h3 := req.Header("Header1")
+	h4 := req.Header("Header2")
+	h5 := req.Header("unknown")
 
 	if h1 != "application/json" || h2 != "20" || h3 != "header1" || h4 != "header2" || h5 != "" {
 		t.Errorf("Error parsing headers")

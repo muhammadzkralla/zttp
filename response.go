@@ -44,7 +44,7 @@ func (res *Res) Json(data any) {
 	sendResponse(res.Socket, string(raw), res.StatusCode, res.ContentType, res.Headers)
 }
 
-func (res *Res) Set(key, value string) {
+func (res *Res) Header(key, value string) {
 	res.Headers[key] = value
 }
 

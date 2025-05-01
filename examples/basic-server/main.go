@@ -13,9 +13,8 @@ type User struct {
 }
 
 func main() {
-	app := zttp.App{
-		PrettyPrintJSON: true,
-	}
+	app := zttp.NewApp()
+	app.PrettyPrintJSON = true
 
 	app.Use(func(req zttp.Req, res zttp.Res, next func()) {
 		log.Printf("m1: Request: %s %s\n", req.Method, req.Path)
@@ -131,8 +130,8 @@ func main() {
 	})
 
 	app.Get("/get/header", func(req zttp.Req, res zttp.Res) {
-		h1 := req.Get("Header1")
-		h2 := req.Get("Header2")
+		h1 := req.Header("Header1")
+		h2 := req.Header("Header2")
 
 		var response string
 
@@ -143,9 +142,9 @@ func main() {
 	})
 
 	app.Get("/set/header", func(req zttp.Req, res zttp.Res) {
-		res.Set("Header1", "header1")
-		res.Set("Header1", "notheader1")
-		res.Set("Header2", "header2")
+		res.Header("Header1", "header1")
+		res.Header("Header1", "notheader1")
+		res.Header("Header2", "header2")
 
 		res.Send("ok")
 	})

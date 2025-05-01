@@ -84,9 +84,9 @@ func TestSetResponseHeaders(t *testing.T) {
 		Headers: make(map[string]string),
 	}
 
-	res.Set("Header1", "header1")
-	res.Set("Header1", "notheader1")
-	res.Set("Header2", "header2")
+	res.Header("Header1", "header1")
+	res.Header("Header1", "notheader1")
+	res.Header("Header2", "header2")
 
 	if res.Headers["Header1"] != "notheader1" || res.Headers["Header2"] != "header2" {
 		t.Errorf("Error setting response headers")

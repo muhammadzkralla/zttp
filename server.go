@@ -19,6 +19,17 @@ type App struct {
 	PrettyPrintJSON bool
 }
 
+func NewApp() *App {
+	return &App{
+		getRoutes:    []Route{},
+		postRoutes:   []Route{},
+		deleteRoutes: []Route{},
+		putRoutes:    []Route{},
+		patchRoutes:  []Route{},
+		middlewares:  []MiddlewareWrapper{},
+	}
+}
+
 func (app *App) Start(port int) {
 	p := fmt.Sprintf(":%d", port)
 	server, err := net.Listen("tcp", p)

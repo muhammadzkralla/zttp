@@ -49,37 +49,32 @@ func main() {
 	app.Post("/home", func(req zttp.Req, res zttp.Res) {
 		reqBody := req.Body
 		response := "You sent: " + reqBody
-		res.StatusCode = 201
-		res.Send(response)
+		res.Status(201).Send(response)
 	})
 
 	app.Post("/post/:postId/comment/:commentId", func(req zttp.Req, res zttp.Res) {
 		postId := req.Params["postId"]
 		commentId := req.Params["commentId"]
 		response := fmt.Sprintf("Posted %s for post id %s and comment id %s", req.Body, postId, commentId)
-		res.StatusCode = 201
-		res.Send(response)
+		res.Status(201).Send(response)
 	})
 
 	app.Put("/home", func(req zttp.Req, res zttp.Res) {
 		reqBody := req.Body
 		response := "Updated home with: " + reqBody
-		res.StatusCode = 201
-		res.Send(response)
+		res.Status(201).Send(response)
 	})
 
 	app.Put("/post/:postId/comment/:commentId", func(req zttp.Req, res zttp.Res) {
 		postId := req.Params["postId"]
 		commentId := req.Params["commentId"]
 		response := fmt.Sprintf("Updated post id %s and comment id %s with %s", postId, commentId, req.Body)
-		res.StatusCode = 201
-		res.Send(response)
+		res.Status(201).Send(response)
 	})
 
 	app.Patch("/home", func(req zttp.Req, res zttp.Res) {
 		reqBody := req.Body
 		response := "Patched home with: " + reqBody
-		res.StatusCode = 201
 		res.Send(response)
 	})
 
@@ -87,8 +82,7 @@ func main() {
 		postId := req.Params["postId"]
 		commentId := req.Params["commentId"]
 		response := fmt.Sprintf("Patched post id %s and comment id %s with %s", postId, commentId, req.Body)
-		res.StatusCode = 201
-		res.Send(response)
+		res.Status(201).Send(response)
 	})
 
 	app.Post("/user", func(req zttp.Req, res zttp.Res) {
@@ -100,7 +94,7 @@ func main() {
 			return
 		}
 
-		res.Json(user)
+		res.Status(201).Json(user)
 	})
 
 	app.Get("/user", func(req zttp.Req, res zttp.Res) {

@@ -3,7 +3,6 @@ package zttp
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"strings"
@@ -19,6 +18,7 @@ type App struct {
 	PrettyPrintJSON bool
 }
 
+// New App constructor
 func NewApp() *App {
 	return &App{
 		getRoutes:    []Route{},
@@ -30,90 +30,60 @@ func NewApp() *App {
 	}
 }
 
+// Start listening to the given port
 func (app *App) Start(port int) {
-	p := fmt.Sprintf(":%d", port)
-	server, err := net.Listen("tcp", p)
+
+	// Initiate the tcp server sockets
+	server, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Println("err initiating server... " + err.Error())
 	}
 
 	for {
+		// accept tcp socket connections indefinitely
 		socket, err := server.Accept()
 		if err != nil {
 			log.Println("err accepting socket")
 		}
 
+		// handle the connected client tcp socket in a goroutine
 		go handleClient(socket, app)
 	}
 }
 
+// The Front Controller
+// This function is responsible for handling the incoming request from the client tcp socket
+// from the beginning until it sends a response and close the connection eventually
 func handleClient(socket net.Conn, app *App) {
 	defer socket.Close()
 
+	// Buffer reader to read from the client tcp socket
 	rdr := bufio.NewReader(socket)
-	requestLine, err := rdr.ReadString('\n')
-	if err != nil {
-		if err == io.EOF {
-			log.Println("connection closed by client")
-			return
-		}
 
-		log.Println("err reading from socket... " + err.Error())
-		return
-	}
-
-	requestLine = strings.TrimSpace(requestLine)
-	fmt.Println("Incoming request: " + requestLine)
-
-	if requestLine == "" {
-		log.Println("empty request line, sending 'Bad Request' response")
-		sendResponse(socket, "Bad Request", 400, "text/plain", nil)
-		return
-	}
-
-	requestParts := strings.SplitN(requestLine, " ", 3)
-	if len(requestParts) < 2 {
-		log.Println("invalid request line: " + requestLine)
-		sendResponse(socket, "Bad Request", 400, "text/plain", nil)
-		return
-	}
-
+	// Extract the request line, headers, and body
+	requestParts := extractRequestLine(rdr, socket)
 	headers, contentLength := extractHeaders(rdr)
-
 	body := extractBody(rdr, contentLength)
 
+	// Extract the method and the raw path from the request line
 	method := requestParts[0]
 	rawPath := requestParts[1]
 
 	path := rawPath
 	queries := make(map[string]string)
 
+	// Extract queries, if exist
 	if strings.Contains(rawPath, "?") {
 		split := strings.SplitN(rawPath, "?", 2)
 		path = split[0]
 		queries = extractQueries(split[1])
 	}
 
-	var handler Handler
-	var params map[string]string
+	// Find the matched handler from the router with parsing params, if exist
+	handler, params := findHandler(method, path, socket, app)
 
-	switch method {
-	case "GET":
-		handler, params = matchRoute(path, app.getRoutes)
-	case "DELETE":
-		handler, params = matchRoute(path, app.deleteRoutes)
-	case "POST":
-		handler, params = matchRoute(path, app.postRoutes)
-	case "PUT":
-		handler, params = matchRoute(path, app.putRoutes)
-	case "PATCH":
-		handler, params = matchRoute(path, app.patchRoutes)
-	default:
-		log.Println("unsupported method:", method)
-		sendResponse(socket, "Method Not Allowed", 405, "text/plain", nil)
-		return
-	}
-
+	// If a handler matched, call it with the generated request and response objects
+	// Otherwise, send a 404 not found response
 	if handler != nil {
 		req := Req{
 			Method:  method,

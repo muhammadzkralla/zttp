@@ -54,7 +54,7 @@ func applyMiddleware(finalHandler Handler, app *App) Handler {
 	// The req and res arguments are the ones created in the server file
 	return func(req Req, res Res) {
 
-		// Store the inedx of the current middleware globally before incrementing it recursively
+		// Store the index of the current middleware globally before incrementing it recursively
 		currentMiddlewareIdx := 0
 
 		var next func()

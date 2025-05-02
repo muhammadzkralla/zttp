@@ -13,9 +13,8 @@ type User struct {
 }
 
 func main() {
-	app := zttp.App{
-		PrettyPrintJSON: true,
-	}
+	app := zttp.NewApp()
+	app.PrettyPrintJSON = true
 
 	app.Use(func(req zttp.Req, res zttp.Res, next func()) {
 		log.Printf("m1: Request: %s %s\n", req.Method, req.Path)
@@ -50,37 +49,32 @@ func main() {
 	app.Post("/home", func(req zttp.Req, res zttp.Res) {
 		reqBody := req.Body
 		response := "You sent: " + reqBody
-		res.StatusCode = 201
-		res.Send(response)
+		res.Status(201).Send(response)
 	})
 
 	app.Post("/post/:postId/comment/:commentId", func(req zttp.Req, res zttp.Res) {
 		postId := req.Params["postId"]
 		commentId := req.Params["commentId"]
 		response := fmt.Sprintf("Posted %s for post id %s and comment id %s", req.Body, postId, commentId)
-		res.StatusCode = 201
-		res.Send(response)
+		res.Status(201).Send(response)
 	})
 
 	app.Put("/home", func(req zttp.Req, res zttp.Res) {
 		reqBody := req.Body
 		response := "Updated home with: " + reqBody
-		res.StatusCode = 201
-		res.Send(response)
+		res.Status(201).Send(response)
 	})
 
 	app.Put("/post/:postId/comment/:commentId", func(req zttp.Req, res zttp.Res) {
 		postId := req.Params["postId"]
 		commentId := req.Params["commentId"]
 		response := fmt.Sprintf("Updated post id %s and comment id %s with %s", postId, commentId, req.Body)
-		res.StatusCode = 201
-		res.Send(response)
+		res.Status(201).Send(response)
 	})
 
 	app.Patch("/home", func(req zttp.Req, res zttp.Res) {
 		reqBody := req.Body
 		response := "Patched home with: " + reqBody
-		res.StatusCode = 201
 		res.Send(response)
 	})
 
@@ -88,8 +82,7 @@ func main() {
 		postId := req.Params["postId"]
 		commentId := req.Params["commentId"]
 		response := fmt.Sprintf("Patched post id %s and comment id %s with %s", postId, commentId, req.Body)
-		res.StatusCode = 201
-		res.Send(response)
+		res.Status(201).Send(response)
 	})
 
 	app.Post("/user", func(req zttp.Req, res zttp.Res) {
@@ -101,7 +94,7 @@ func main() {
 			return
 		}
 
-		res.Json(user)
+		res.Status(201).Json(user)
 	})
 
 	app.Get("/user", func(req zttp.Req, res zttp.Res) {
@@ -131,8 +124,8 @@ func main() {
 	})
 
 	app.Get("/get/header", func(req zttp.Req, res zttp.Res) {
-		h1 := req.Get("Header1")
-		h2 := req.Get("Header2")
+		h1 := req.Header("Header1")
+		h2 := req.Header("Header2")
 
 		var response string
 
@@ -143,9 +136,9 @@ func main() {
 	})
 
 	app.Get("/set/header", func(req zttp.Req, res zttp.Res) {
-		res.Set("Header1", "header1")
-		res.Set("Header1", "notheader1")
-		res.Set("Header2", "header2")
+		res.Header("Header1", "header1")
+		res.Header("Header1", "notheader1")
+		res.Header("Header2", "header2")
 
 		res.Send("ok")
 	})

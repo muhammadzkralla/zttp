@@ -15,6 +15,7 @@ type Res struct {
 	PrettyPrintJSON bool
 }
 
+// This function sends a text/plain response body
 func (res *Res) Send(data string) {
 	if res.ContentType == "" {
 		res.ContentType = "text/plain; charset=utf-8"
@@ -23,10 +24,12 @@ func (res *Res) Send(data string) {
 	sendResponse(res.Socket, data, res.StatusCode, res.ContentType, res.Headers)
 }
 
+// This function sends a JSON response body
 func (res *Res) Json(data any) {
 	var raw []byte
 	var err error
 
+	// If the app is configured to pretty print JSON responses or not
 	if res.PrettyPrintJSON {
 		raw, err = json.MarshalIndent(data, "", "    ")
 	} else {
@@ -44,20 +47,25 @@ func (res *Res) Json(data any) {
 	sendResponse(res.Socket, string(raw), res.StatusCode, res.ContentType, res.Headers)
 }
 
-func (res *Res) Set(key, value string) {
+// Sets the value of the passed header key
+func (res *Res) Header(key, value string) {
 	res.Headers[key] = value
 }
 
+// Sets the status code of the current response
 func (res *Res) Status(code int) *Res {
 	res.StatusCode = code
 	return res
 }
 
+// Writes the response data into the client tcp socket's buffer
 func sendResponse(socket net.Conn, body string, code int, contentType string, headers map[string]string) {
 	statusMessage := getHTTPStatusMessage(code)
 	fmt.Fprintf(socket, "HTTP/1.1 %d %s\r\n", code, statusMessage)
 	fmt.Fprintf(socket, "Content-Length: %d\r\n", len(body))
 	fmt.Fprintf(socket, "Content-Type: %s\r\n", contentType)
+
+	// If there's any extra response headers
 	if headers != nil {
 		for k, v := range headers {
 			fmt.Fprintf(socket, "%s: %s\r\n", k, v)
@@ -67,6 +75,8 @@ func sendResponse(socket net.Conn, body string, code int, contentType string, he
 	fmt.Fprintf(socket, "%s", body)
 }
 
+// Translate the given status code into an HTTP status message
+// TODO: must be extended with more codes
 func getHTTPStatusMessage(code int) string {
 	statusMessages := map[int]string{
 		200: "OK",

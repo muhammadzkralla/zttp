@@ -147,5 +147,15 @@ func main() {
 		res.Status(400).Send("Bad Request Manually")
 	})
 
+	router := app.NewRouter("/api/v1")
+
+	router.Get("/home", func(req zttp.Req, res zttp.Res) {
+		res.Status(200).Send("/api/v1/home get found")
+	})
+
+	router.Post("/home/:postId/comment/:commentId", func(req zttp.Req, res zttp.Res) {
+		res.Status(201).Send("/api/v1/home post found with postId: " + req.Param("postId") + " and commentId: " + req.Param("commentId"))
+	})
+
 	app.Start(1069)
 }

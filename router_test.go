@@ -131,3 +131,30 @@ func TestNotFoundHandler(t *testing.T) {
 		t.Errorf("Expected 'Not Found', but got %s", response)
 	}
 }
+
+func TestCustomRouter(t *testing.T) {
+	app := NewApp()
+
+	router := app.NewRouter("/api/v1")
+
+	router.Get("/home", func(req Req, res Res) {
+		res.Status(200).Send("/api/v1/home get found")
+	})
+
+	router.Post("/home/:postId/comment/:commentId", func(req Req, res Res) {
+		res.Status(201).Send("/api/v1/home post found with postId: " + req.Param("postId") + " and commentId: " + req.Param("commentId"))
+	})
+
+	response := mockRequest(app, "GET", "/api/v1/home", "")
+
+	if !strings.Contains(response, "/api/v1/home get found") {
+		t.Errorf("Expected 'api/v1/home', but got %s", response)
+	}
+
+	response = mockRequest(app, "POST", "/api/v1/home/123/comment/comment1", "")
+
+	if !strings.Contains(response, "/api/v1/home post found with postId: 123 and commentId: comment1") {
+		t.Errorf("Expected 'api/v1/home', but got %s", response)
+	}
+
+}

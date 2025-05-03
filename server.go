@@ -10,21 +10,41 @@ import (
 
 type App struct {
 	*Router
+	Routers         []*Router
 	PrettyPrintJSON bool
 }
 
 // New App constructor
 func NewApp() *App {
-	return &App{
-		Router: &Router{
-			getRoutes:    []Route{},
-			postRoutes:   []Route{},
-			deleteRoutes: []Route{},
-			putRoutes:    []Route{},
-			patchRoutes:  []Route{},
-			middlewares:  []MiddlewareWrapper{},
-		},
+	defaultRouter := &Router{
+		getRoutes:    []Route{},
+		postRoutes:   []Route{},
+		deleteRoutes: []Route{},
+		putRoutes:    []Route{},
+		patchRoutes:  []Route{},
+		middlewares:  []MiddlewareWrapper{},
 	}
+	return &App{
+		Router:  defaultRouter,
+		Routers: []*Router{defaultRouter},
+	}
+}
+
+// New Router constructor
+func (app *App) NewRouter(path string) *Router {
+	router := &Router{
+		prefix:       path,
+		getRoutes:    []Route{},
+		postRoutes:   []Route{},
+		deleteRoutes: []Route{},
+		putRoutes:    []Route{},
+		patchRoutes:  []Route{},
+		middlewares:  []MiddlewareWrapper{},
+	}
+
+	app.Routers = append(app.Routers, router)
+
+	return router
 }
 
 // Start listening to the given port

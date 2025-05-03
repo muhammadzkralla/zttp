@@ -169,20 +169,29 @@ func extractQueries(rawPath string) map[string]string {
 
 // Find the matched handler with the passed path from the router and parse params, if exist
 func findHandler(method, path string, socket net.Conn, app *App) (Handler, map[string]string) {
-	switch method {
-	case "GET":
-		return matchRoute(path, app.getRoutes)
-	case "DELETE":
-		return matchRoute(path, app.deleteRoutes)
-	case "POST":
-		return matchRoute(path, app.postRoutes)
-	case "PUT":
-		return matchRoute(path, app.putRoutes)
-	case "PATCH":
-		return matchRoute(path, app.patchRoutes)
-	default:
-		log.Println("unsupported method:", method)
-		sendResponse(socket, "Method Not Allowed", 405, "text/plain", nil)
-		return nil, nil
+	for _, router := range app.Routers {
+		var routes []Route
+		switch method {
+		case "GET":
+			routes = router.getRoutes
+		case "DELETE":
+			routes = router.deleteRoutes
+		case "POST":
+			routes = router.postRoutes
+		case "PUT":
+			routes = router.putRoutes
+		case "PATCH":
+			routes = router.patchRoutes
+		default:
+			log.Println("unsupported method:", method)
+			sendResponse(socket, "Method Not Allowed", 405, "text/plain", nil)
+			return nil, nil
+		}
+
+		if handler, params := matchRoute(path, routes); handler != nil {
+			return handler, params
+		}
 	}
+
+	return nil, nil
 }

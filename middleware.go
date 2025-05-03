@@ -61,8 +61,10 @@ func applyMiddleware(finalHandler Handler, router *Router) Handler {
 		next = func() {
 
 			// If there are still middlewares to check in the app's middlewares
-			if currentMiddlewareIdx < len(router.middlewares) {
-				middlewareWrapper := router.middlewares[currentMiddlewareIdx]
+			// Combine global middlewares and router-specific middlewares
+			allMiddlewares := append(app.middlewares, router.middlewares...)
+			if currentMiddlewareIdx < len(allMiddlewares) {
+				middlewareWrapper := allMiddlewares[currentMiddlewareIdx]
 
 				// Increment the middleware index to check the next middleware in the next
 				// recursive call

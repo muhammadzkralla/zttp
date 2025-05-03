@@ -49,7 +49,7 @@ func (app *App) Use(args ...any) {
 }
 
 // This function constructs a chain of functions to be called one after the other
-func applyMiddleware(finalHandler Handler, app *App) Handler {
+func applyMiddleware(finalHandler Handler, router *Router) Handler {
 
 	// The req and res arguments are the ones created in the server file
 	return func(req Req, res Res) {
@@ -61,8 +61,8 @@ func applyMiddleware(finalHandler Handler, app *App) Handler {
 		next = func() {
 
 			// If there are still middlewares to check in the app's middlewares
-			if currentMiddlewareIdx < len(app.middlewares) {
-				middlewareWrapper := app.middlewares[currentMiddlewareIdx]
+			if currentMiddlewareIdx < len(router.middlewares) {
+				middlewareWrapper := router.middlewares[currentMiddlewareIdx]
 
 				// Increment the middleware index to check the next middleware in the next
 				// recursive call

@@ -9,29 +9,64 @@ type Route struct {
 	handler Handler
 }
 
+type Router struct {
+	prefix       string
+	getRoutes    []Route
+	postRoutes   []Route
+	deleteRoutes []Route
+	putRoutes    []Route
+	patchRoutes  []Route
+	middlewares  []MiddlewareWrapper
+}
+
 // Register the passed handler and path with the app's get routes
 func (app *App) Get(path string, handler Handler) {
-	app.getRoutes = append(app.getRoutes, Route{path, applyMiddleware(handler, app)})
+	app.getRoutes = append(app.getRoutes, Route{path, applyMiddleware(handler, app.Router)})
 }
 
 // Register the passed handler and path with the app's delete routes
 func (app *App) Delete(path string, handler Handler) {
-	app.deleteRoutes = append(app.deleteRoutes, Route{path, applyMiddleware(handler, app)})
+	app.deleteRoutes = append(app.deleteRoutes, Route{path, applyMiddleware(handler, app.Router)})
 }
 
 // Register the passed handler and path with the app's post routes
 func (app *App) Post(path string, handler Handler) {
-	app.postRoutes = append(app.postRoutes, Route{path, applyMiddleware(handler, app)})
+	app.postRoutes = append(app.postRoutes, Route{path, applyMiddleware(handler, app.Router)})
 }
 
 // Register the passed handler and path with the app's put routes
 func (app *App) Put(path string, handler Handler) {
-	app.putRoutes = append(app.putRoutes, Route{path, applyMiddleware(handler, app)})
+	app.putRoutes = append(app.putRoutes, Route{path, applyMiddleware(handler, app.Router)})
 }
 
 // Register the passed handler and path with the app's patch routes
 func (app *App) Patch(path string, handler Handler) {
-	app.patchRoutes = append(app.patchRoutes, Route{path, applyMiddleware(handler, app)})
+	app.patchRoutes = append(app.patchRoutes, Route{path, applyMiddleware(handler, app.Router)})
+}
+
+// Register the passed handler and path with the router's get routes
+func (router *Router) Get(path string, handler Handler) {
+	router.getRoutes = append(router.getRoutes, Route{router.prefix + path, applyMiddleware(handler, router)})
+}
+
+// Register the passed handler and path with the router's delete routes
+func (router *Router) Delete(path string, handler Handler) {
+	router.deleteRoutes = append(router.deleteRoutes, Route{router.prefix + path, applyMiddleware(handler, router)})
+}
+
+// Register the passed handler and path with the router's post routes
+func (router *Router) Post(path string, handler Handler) {
+	router.postRoutes = append(router.postRoutes, Route{router.prefix + path, applyMiddleware(handler, router)})
+}
+
+// Register the passed handler and path with the router's put routes
+func (router *Router) Put(path string, handler Handler) {
+	router.putRoutes = append(router.putRoutes, Route{router.prefix + path, applyMiddleware(handler, router)})
+}
+
+// Register the passed handler and path with the router's patch routes
+func (router *Router) Patch(path string, handler Handler) {
+	router.patchRoutes = append(router.patchRoutes, Route{router.prefix + path, applyMiddleware(handler, router)})
 }
 
 // This function searches for the matching handler for the passed request path

@@ -7,7 +7,7 @@ import (
 
 // Test middleware
 func TestMiddleware(t *testing.T) {
-	app := &App{}
+	app := NewApp()
 
 	// Global middleware
 	app.Use(func(req Req, res Res, next func()) {

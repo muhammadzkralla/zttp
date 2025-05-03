@@ -7,7 +7,7 @@ import (
 
 // Test GET route matching
 func TestGetRouteMatching(t *testing.T) {
-	app := &App{}
+	app := NewApp()
 
 	// Mock a GET handler
 	app.Get("/test", func(req Req, res Res) {
@@ -24,7 +24,7 @@ func TestGetRouteMatching(t *testing.T) {
 
 // Test DELETE route matching
 func TestDeleteRouteMatching(t *testing.T) {
-	app := &App{}
+	app := NewApp()
 
 	// Mock a DELETE handler
 	app.Delete("/test", func(req Req, res Res) {
@@ -41,7 +41,7 @@ func TestDeleteRouteMatching(t *testing.T) {
 
 // Test POST route matching
 func TestPostRouteMatching(t *testing.T) {
-	app := &App{}
+	app := NewApp()
 
 	// Mock a POST handler
 	app.Post("/test", func(req Req, res Res) {
@@ -58,7 +58,7 @@ func TestPostRouteMatching(t *testing.T) {
 
 // Test PUT route matching
 func TestPutRouteMatching(t *testing.T) {
-	app := &App{}
+	app := NewApp()
 
 	// Mock a PUT handler
 	app.Put("/test", func(req Req, res Res) {
@@ -75,7 +75,7 @@ func TestPutRouteMatching(t *testing.T) {
 
 // Test PATCH route matching
 func TestPatchRouteMatching(t *testing.T) {
-	app := &App{}
+	app := NewApp()
 
 	// Mock a PATCH handler
 	app.Patch("/test", func(req Req, res Res) {
@@ -92,7 +92,7 @@ func TestPatchRouteMatching(t *testing.T) {
 
 // Test dynamic routing
 func TestDynamicRouting(t *testing.T) {
-	app := &App{}
+	app := NewApp()
 
 	// Mock a GET handler
 	app.Get("/test/:postId/comment/:commentId", func(req Req, res Res) {
@@ -122,7 +122,7 @@ func TestDynamicRouting(t *testing.T) {
 
 // Test 404 not found handler
 func TestNotFoundHandler(t *testing.T) {
-	app := &App{}
+	app := NewApp()
 
 	// Perform a request to a non-existing handler
 	response := mockRequest(app, "GET", "/test", "")
@@ -130,4 +130,31 @@ func TestNotFoundHandler(t *testing.T) {
 	if !strings.Contains(response, "Not Found") {
 		t.Errorf("Expected 'Not Found', but got %s", response)
 	}
+}
+
+func TestCustomRouter(t *testing.T) {
+	app := NewApp()
+
+	router := app.NewRouter("/api/v1")
+
+	router.Get("/home", func(req Req, res Res) {
+		res.Status(200).Send("/api/v1/home get found")
+	})
+
+	router.Post("/home/:postId/comment/:commentId", func(req Req, res Res) {
+		res.Status(201).Send("/api/v1/home post found with postId: " + req.Param("postId") + " and commentId: " + req.Param("commentId"))
+	})
+
+	response := mockRequest(app, "GET", "/api/v1/home", "")
+
+	if !strings.Contains(response, "/api/v1/home get found") {
+		t.Errorf("Expected 'api/v1/home', but got %s", response)
+	}
+
+	response = mockRequest(app, "POST", "/api/v1/home/123/comment/comment1", "")
+
+	if !strings.Contains(response, "/api/v1/home post found with postId: 123 and commentId: comment1") {
+		t.Errorf("Expected 'api/v1/home', but got %s", response)
+	}
+
 }

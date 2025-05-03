@@ -9,6 +9,15 @@ type Route struct {
 	handler Handler
 }
 
+type Router struct {
+	getRoutes    []Route
+	postRoutes   []Route
+	deleteRoutes []Route
+	putRoutes    []Route
+	patchRoutes  []Route
+	middlewares  []MiddlewareWrapper
+}
+
 // Register the passed handler and path with the app's get routes
 func (app *App) Get(path string, handler Handler) {
 	app.getRoutes = append(app.getRoutes, Route{path, applyMiddleware(handler, app)})

@@ -9,24 +9,21 @@ import (
 )
 
 type App struct {
-	getRoutes       []Route
-	postRoutes      []Route
-	deleteRoutes    []Route
-	putRoutes       []Route
-	patchRoutes     []Route
-	middlewares     []MiddlewareWrapper
+	*Router
 	PrettyPrintJSON bool
 }
 
 // New App constructor
 func NewApp() *App {
 	return &App{
-		getRoutes:    []Route{},
-		postRoutes:   []Route{},
-		deleteRoutes: []Route{},
-		putRoutes:    []Route{},
-		patchRoutes:  []Route{},
-		middlewares:  []MiddlewareWrapper{},
+		Router: &Router{
+			getRoutes:    []Route{},
+			postRoutes:   []Route{},
+			deleteRoutes: []Route{},
+			putRoutes:    []Route{},
+			patchRoutes:  []Route{},
+			middlewares:  []MiddlewareWrapper{},
+		},
 	}
 }
 

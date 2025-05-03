@@ -7,7 +7,7 @@ import (
 
 // Test GET route matching
 func TestGetRouteMatching(t *testing.T) {
-	app := &App{}
+	app := NewApp()
 
 	// Mock a GET handler
 	app.Get("/test", func(req Req, res Res) {
@@ -24,7 +24,7 @@ func TestGetRouteMatching(t *testing.T) {
 
 // Test DELETE route matching
 func TestDeleteRouteMatching(t *testing.T) {
-	app := &App{}
+	app := NewApp()
 
 	// Mock a DELETE handler
 	app.Delete("/test", func(req Req, res Res) {
@@ -41,7 +41,7 @@ func TestDeleteRouteMatching(t *testing.T) {
 
 // Test POST route matching
 func TestPostRouteMatching(t *testing.T) {
-	app := &App{}
+	app := NewApp()
 
 	// Mock a POST handler
 	app.Post("/test", func(req Req, res Res) {
@@ -58,7 +58,7 @@ func TestPostRouteMatching(t *testing.T) {
 
 // Test PUT route matching
 func TestPutRouteMatching(t *testing.T) {
-	app := &App{}
+	app := NewApp()
 
 	// Mock a PUT handler
 	app.Put("/test", func(req Req, res Res) {
@@ -75,7 +75,7 @@ func TestPutRouteMatching(t *testing.T) {
 
 // Test PATCH route matching
 func TestPatchRouteMatching(t *testing.T) {
-	app := &App{}
+	app := NewApp()
 
 	// Mock a PATCH handler
 	app.Patch("/test", func(req Req, res Res) {
@@ -92,7 +92,7 @@ func TestPatchRouteMatching(t *testing.T) {
 
 // Test dynamic routing
 func TestDynamicRouting(t *testing.T) {
-	app := &App{}
+	app := NewApp()
 
 	// Mock a GET handler
 	app.Get("/test/:postId/comment/:commentId", func(req Req, res Res) {
@@ -122,7 +122,7 @@ func TestDynamicRouting(t *testing.T) {
 
 // Test 404 not found handler
 func TestNotFoundHandler(t *testing.T) {
-	app := &App{}
+	app := NewApp()
 
 	// Perform a request to a non-existing handler
 	response := mockRequest(app, "GET", "/test", "")

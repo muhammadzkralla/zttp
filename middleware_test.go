@@ -46,3 +46,45 @@ func TestMiddleware(t *testing.T) {
 		t.Errorf("Expected both middlewares for /api, got: %s", response2)
 	}
 }
+
+// Test app (global) middlewares matching vs router (local) middlewares matching
+func TestRouterMiddlewares(t *testing.T) {
+	app := NewApp()
+
+	// Global middleware
+	app.Use(func(req Req, res Res, next func()) {
+		res.Header("GlobalMiddleware", "true")
+		next()
+	})
+
+	router := app.NewRouter("/api/v1")
+
+	// Router middleware
+	router.Use(func(req Req, res Res, next func()) {
+		res.Header("RouterMiddleware", "true")
+		next()
+	})
+
+	router.Get("/test", func(req Req, res Res) {
+		res.Status(200).Send("")
+	})
+
+	app.Get("/test", func(req Req, res Res) {
+		res.Status(200).Send("")
+	})
+
+	response := mockRequest(app, "GET", "/api/v1/test", "")
+
+	// The first one should execute both middlewares
+	if !strings.Contains(response, "GlobalMiddleware") || !strings.Contains(response, "RouterMiddleware") {
+		t.Errorf("Expected both global and router middlewares to work, but found %s", response)
+	}
+
+	response = mockRequest(app, "GET", "/test", "")
+
+	// The second one should just execute the global middleware
+	if !strings.Contains(response, "GlobalMiddleware") || strings.Contains(response, "RouterMiddleware") {
+		t.Errorf("Expected both global and router middlewares to work, but found %s", response)
+	}
+
+}

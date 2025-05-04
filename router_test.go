@@ -158,3 +158,29 @@ func TestCustomRouter(t *testing.T) {
 	}
 
 }
+
+// Test path cleaning logic
+func TestCleanPath(t *testing.T) {
+	tests := []struct {
+		prefix string
+		path   string
+		want   string
+	}{
+		{"/api", "/users", "/api/users"},
+		{"/api/", "/users", "/api/users"},
+		{"/api", "users", "/api/users"},
+		{"/api", "/users/", "/api/users"},
+		{"/", "/users", "/users"},
+		{"/", "users", "/users"},
+		{"", "/users", "/users"},
+		{"", "users", "/users"},
+		{"/api", "//users//profile", "/api/users/profile"},
+	}
+
+	for _, tt := range tests {
+		got := cleanPath(tt.prefix, tt.path)
+		if got != tt.want {
+			t.Errorf("cleanPath(%q, %q) = %q; want %q", tt.prefix, tt.path, got, tt.want)
+		}
+	}
+}

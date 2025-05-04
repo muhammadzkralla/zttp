@@ -1,6 +1,9 @@
 package zttp
 
-import "strings"
+import (
+	"path"
+	"strings"
+)
 
 type Handler func(req Req, res Res)
 
@@ -10,6 +13,7 @@ type Route struct {
 }
 
 type Router struct {
+	*App
 	prefix       string
 	getRoutes    []Route
 	postRoutes   []Route
@@ -46,27 +50,50 @@ func (app *App) Patch(path string, handler Handler) {
 
 // Register the passed handler and path with the router's get routes
 func (router *Router) Get(path string, handler Handler) {
-	router.getRoutes = append(router.getRoutes, Route{router.prefix + path, applyMiddleware(handler, router)})
+	router.getRoutes = append(router.getRoutes, Route{cleanPath(router.prefix, path), applyMiddleware(handler, router)})
 }
 
 // Register the passed handler and path with the router's delete routes
 func (router *Router) Delete(path string, handler Handler) {
-	router.deleteRoutes = append(router.deleteRoutes, Route{router.prefix + path, applyMiddleware(handler, router)})
+	router.deleteRoutes = append(router.deleteRoutes, Route{cleanPath(router.prefix, path), applyMiddleware(handler, router)})
 }
 
 // Register the passed handler and path with the router's post routes
 func (router *Router) Post(path string, handler Handler) {
-	router.postRoutes = append(router.postRoutes, Route{router.prefix + path, applyMiddleware(handler, router)})
+	router.postRoutes = append(router.postRoutes, Route{cleanPath(router.prefix, path), applyMiddleware(handler, router)})
 }
 
 // Register the passed handler and path with the router's put routes
 func (router *Router) Put(path string, handler Handler) {
-	router.putRoutes = append(router.putRoutes, Route{router.prefix + path, applyMiddleware(handler, router)})
+	router.putRoutes = append(router.putRoutes, Route{cleanPath(router.prefix, path), applyMiddleware(handler, router)})
 }
 
 // Register the passed handler and path with the router's patch routes
 func (router *Router) Patch(path string, handler Handler) {
-	router.patchRoutes = append(router.patchRoutes, Route{router.prefix + path, applyMiddleware(handler, router)})
+	router.patchRoutes = append(router.patchRoutes, Route{cleanPath(router.prefix, path), applyMiddleware(handler, router)})
+}
+
+func cleanPath(prefix, p string) string {
+	// Ensure prefix starts with "/" and does not end with "/"
+	if prefix == "" {
+		prefix = "/"
+	}
+	if prefix != "/" {
+		prefix = path.Clean("/" + prefix)
+	}
+
+	// Ensure path starts with "/"
+	if !path.IsAbs(p) {
+		p = "/" + p
+	}
+	p = path.Clean(p)
+
+	// Concatenate and clean the final path
+	full := path.Join(prefix, p)
+	if full != "/" && full[len(full)-1] == '/' {
+		full = full[:len(full)-1]
+	}
+	return full
 }
 
 // This function searches for the matching handler for the passed request path

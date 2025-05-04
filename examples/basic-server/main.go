@@ -17,11 +17,13 @@ func main() {
 	app.PrettyPrintJSON = true
 
 	app.Use(func(req zttp.Req, res zttp.Res, next func()) {
+		res.Header("GlobalMiddleware", "true")
 		log.Printf("m1: Request: %s %s\n", req.Method, req.Path)
 		next()
 	})
 
 	app.Use("/home", func(req zttp.Req, res zttp.Res, next func()) {
+		res.Header("HomeMiddleware", "true")
 		log.Printf("m2: Request: %s %s\n\n", req.Method, req.Path)
 		next()
 	})
@@ -148,6 +150,11 @@ func main() {
 	})
 
 	router := app.NewRouter("/api/v1")
+
+	router.Use(func(req zttp.Req, res zttp.Res, next func()) {
+		res.Header("RouterMiddleware", "true")
+		next()
+	})
 
 	router.Get("/home", func(req zttp.Req, res zttp.Res) {
 		res.Status(200).Send("/api/v1/home get found")

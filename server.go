@@ -24,15 +24,19 @@ func NewApp() *App {
 		patchRoutes:  []Route{},
 		middlewares:  []MiddlewareWrapper{},
 	}
-	return &App{
+	app := &App{
 		Router:  defaultRouter,
 		Routers: []*Router{defaultRouter},
 	}
+
+	defaultRouter.App = app
+	return app
 }
 
 // New Router constructor
 func (app *App) NewRouter(path string) *Router {
 	router := &Router{
+		App:          app,
 		prefix:       path,
 		getRoutes:    []Route{},
 		postRoutes:   []Route{},

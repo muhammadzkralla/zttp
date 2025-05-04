@@ -48,6 +48,44 @@ func (app *App) Use(args ...any) {
 	app.middlewares = append(app.middlewares, mw)
 }
 
+// Use registers a middleware function with the router
+// Example1: router.Use(func(req, res, next) { ... })
+// Example2: router.Use("/admin", func(req, res, next) { ... })
+// Otherwise it will panic, don't panic her, please :)
+func (router *Router) Use(args ...any) {
+	path := ""
+	var middleware Middleware
+
+	// If only one arg is passed, it's expected to be the middleware itself
+	// Otherwise, the first arg is expected to be the path and the other is the middleware
+	if len(args) == 1 {
+		m, ok := args[0].(func(Req, Res, func()))
+		if !ok {
+			panic("Invalid argument: expected handler function")
+		}
+
+		middleware = m
+	} else if len(args) == 2 {
+		p, ok1 := args[0].(string)
+		m, ok2 := args[1].(func(Req, Res, func()))
+		if !ok1 || !ok2 {
+			panic("Invalid arguments: expected string path and handler function")
+		}
+
+		path = p
+		middleware = m
+	} else {
+		panic("Invalid argument: expected handler function")
+	}
+
+	// Register the middleware with the router middlewares
+	mw := MiddlewareWrapper{
+		Path:       path,
+		Middleware: middleware,
+	}
+	router.middlewares = append(router.middlewares, mw)
+}
+
 // This function constructs a chain of functions to be called one after the other
 func applyMiddleware(finalHandler Handler, router *Router) Handler {
 
@@ -60,9 +98,9 @@ func applyMiddleware(finalHandler Handler, router *Router) Handler {
 		var next func()
 		next = func() {
 
-			// TODO: Global middleware support, not only router's middlewares
-			if currentMiddlewareIdx < len(router.middlewares) {
-				middlewareWrapper := router.middlewares[currentMiddlewareIdx]
+			allMiddlewares := append(router.App.middlewares, router.middlewares...)
+			if currentMiddlewareIdx < len(allMiddlewares) {
+				middlewareWrapper := allMiddlewares[currentMiddlewareIdx]
 
 				// Increment the middleware index to check the next middleware in the next
 				// recursive call

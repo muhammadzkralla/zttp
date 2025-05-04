@@ -10,6 +10,7 @@ type Route struct {
 }
 
 type Router struct {
+	*App
 	prefix       string
 	getRoutes    []Route
 	postRoutes   []Route

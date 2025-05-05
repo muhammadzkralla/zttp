@@ -26,7 +26,6 @@ func (res *Res) Send(data string) {
 		res.ContentType = "text/plain; charset=utf-8"
 	}
 
-	res.Header("Content-Type", res.ContentType)
 	sendResponse(res.Socket, []byte(data), res.StatusCode, res.ContentType, res.Headers)
 }
 
@@ -50,7 +49,6 @@ func (res *Res) Json(data any) {
 	}
 
 	res.ContentType = "application/json"
-	res.Header("Content-Type", res.ContentType)
 	sendResponse(res.Socket, raw, res.StatusCode, res.ContentType, res.Headers)
 }
 

@@ -164,5 +164,13 @@ func main() {
 		res.Status(201).Send("/api/v1/home post found with postId: " + req.Param("postId") + " and commentId: " + req.Param("commentId"))
 	})
 
+	app.Get("/static/index.html", func(req zttp.Req, res zttp.Res) {
+		res.Static("", "./public")
+	})
+
+	app.Get("/static/home.html", func(req zttp.Req, res zttp.Res) {
+		res.Static("home.html", "./public")
+	})
+
 	app.Start(1069)
 }

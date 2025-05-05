@@ -86,6 +86,15 @@ func handleClient(socket net.Conn, app *App) {
 	headers, contentLength := extractHeaders(rdr)
 	body := extractBody(rdr, contentLength)
 
+	// TODO: make extractRequestLine() return []string, bool instead
+	// NOTE: THIS WAS ADDED TO AVOID EMPTY TCP CONNECTIONS MADE BY POSTMAN
+	// I think this is somehow related to the keep-alive request header
+	// I will figure it out later
+	if len(requestParts) < 2 {
+		// Request was already handled and response sent, so just return
+		return
+	}
+
 	// Extract the method and the raw path from the request line
 	method := requestParts[0]
 	rawPath := requestParts[1]
@@ -123,6 +132,6 @@ func handleClient(socket net.Conn, app *App) {
 
 		handler(req, res)
 	} else {
-		sendResponse(socket, "Not Found", 404, "text/plain", nil)
+		sendResponse(socket, []byte("Not Found"), 404, "text/plain", nil)
 	}
 }

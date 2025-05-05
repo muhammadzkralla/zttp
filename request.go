@@ -67,7 +67,7 @@ func extractRequestLine(rdr *bufio.Reader, socket net.Conn) []string {
 	// Request line is empty, bad request
 	if requestLine == "" {
 		log.Println("empty request line, sending 'Bad Request' response")
-		sendResponse(socket, "Bad Request", 400, "text/plain", nil)
+		sendResponse(socket, []byte("Bad Request"), 400, "text/plain", nil)
 		return requestParts
 	}
 
@@ -75,7 +75,7 @@ func extractRequestLine(rdr *bufio.Reader, socket net.Conn) []string {
 	requestParts = strings.SplitN(requestLine, " ", 3)
 	if len(requestParts) < 2 {
 		log.Println("invalid request line: " + requestLine)
-		sendResponse(socket, "Bad Request", 400, "text/plain", nil)
+		sendResponse(socket, []byte("Bad Request"), 400, "text/plain", nil)
 		return requestParts
 	}
 
@@ -184,7 +184,7 @@ func findHandler(method, path string, socket net.Conn, app *App) (Handler, map[s
 			routes = router.patchRoutes
 		default:
 			log.Println("unsupported method:", method)
-			sendResponse(socket, "Method Not Allowed", 405, "text/plain", nil)
+			sendResponse(socket, []byte("Method Not Allowed"), 405, "text/plain", nil)
 			return nil, nil
 		}
 

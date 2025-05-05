@@ -123,6 +123,6 @@ func handleClient(socket net.Conn, app *App) {
 
 		handler(req, res)
 	} else {
-		sendResponse(socket, "Not Found", 404, "text/plain", nil)
+		sendResponse(socket, []byte("Not Found"), 404, "text/plain", nil)
 	}
 }

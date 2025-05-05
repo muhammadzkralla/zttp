@@ -21,7 +21,7 @@ func (res *Res) Send(data string) {
 		res.ContentType = "text/plain; charset=utf-8"
 	}
 
-	sendResponse(res.Socket, data, res.StatusCode, res.ContentType, res.Headers)
+	sendResponse(res.Socket, []byte(data), res.StatusCode, res.ContentType, res.Headers)
 }
 
 // This function sends a JSON response body
@@ -44,7 +44,7 @@ func (res *Res) Json(data any) {
 	}
 
 	res.ContentType = "application/json"
-	sendResponse(res.Socket, string(raw), res.StatusCode, res.ContentType, res.Headers)
+	sendResponse(res.Socket, raw, res.StatusCode, res.ContentType, res.Headers)
 }
 
 // Sets the value of the passed header key
@@ -59,7 +59,7 @@ func (res *Res) Status(code int) *Res {
 }
 
 // Writes the response data into the client tcp socket's buffer
-func sendResponse(socket net.Conn, body string, code int, contentType string, headers map[string]string) {
+func sendResponse(socket net.Conn, body []byte, code int, contentType string, headers map[string]string) {
 	statusMessage := getHTTPStatusMessage(code)
 	fmt.Fprintf(socket, "HTTP/1.1 %d %s\r\n", code, statusMessage)
 	fmt.Fprintf(socket, "Content-Length: %d\r\n", len(body))
@@ -72,7 +72,11 @@ func sendResponse(socket net.Conn, body string, code int, contentType string, he
 		}
 	}
 	fmt.Fprintf(socket, "\r\n")
-	fmt.Fprintf(socket, "%s", body)
+
+	_, err := socket.Write(body)
+	if err != nil {
+		log.Println("Error writing response body:", err)
+	}
 }
 
 // Translate the given status code into an HTTP status message

@@ -98,7 +98,14 @@ func applyMiddleware(finalHandler Handler, router *Router) Handler {
 		var next func()
 		next = func() {
 
-			allMiddlewares := append(router.App.middlewares, router.middlewares...)
+			// Avoid appending the app router's middlewares to themselves
+			// This would execute them twice
+			var allMiddlewares []MiddlewareWrapper
+			if router == router.App.Router {
+				allMiddlewares = router.middlewares
+			} else {
+				allMiddlewares = append(router.App.middlewares, router.middlewares...)
+			}
 			if currentMiddlewareIdx < len(allMiddlewares) {
 				middlewareWrapper := allMiddlewares[currentMiddlewareIdx]
 

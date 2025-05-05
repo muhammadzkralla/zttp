@@ -112,3 +112,43 @@ func TestSetStatusCode(t *testing.T) {
 		t.Errorf("Error setting status code to 404")
 	}
 }
+
+func TestStaticResponseServing(t *testing.T) {
+	conn := &MockConn{}
+	res := &Res{
+		Socket:  conn,
+		Headers: make(map[string]string),
+	}
+
+	res.Static("index.html", "./examples/basic-server/public")
+
+	output := string(conn.data)
+
+	if res.Headers["Content-Type"] != "text/html; charset=utf-8" {
+		t.Errorf("Expected header Content-Type: text/html; charset=utf-8, but got %s", res.Headers["Content-Type"])
+	}
+
+	if !strings.Contains(output, "<h1>Hello from static index file!</h1>") {
+		t.Errorf("Unexpected response body: %s", output)
+	}
+
+	res.Static("home.html", "./examples/basic-server/public")
+
+	output = string(conn.data)
+
+	if res.Headers["Content-Type"] != "text/html; charset=utf-8" {
+		t.Errorf("Expected header Content-Type: text/html; charset=utf-8, but got %s", res.Headers["Content-Type"])
+	}
+
+	if !strings.Contains(output, "<h1>Hello from static home file!</h1>") {
+		t.Errorf("Unexpected response body: %s", output)
+	}
+
+	res.Static("download.png", "./examples/basic-server/public")
+
+	output = string(conn.data)
+
+	if res.Headers["Content-Type"] != "image/png" {
+		t.Errorf("Expected header image/png, but got %s", res.Headers["Content-Type"])
+	}
+}

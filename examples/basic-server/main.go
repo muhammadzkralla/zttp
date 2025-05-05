@@ -172,5 +172,9 @@ func main() {
 		res.Static("home.html", "./public")
 	})
 
+	app.Get("/static/download.png", func(req zttp.Req, res zttp.Res) {
+		res.Static("download.png", "./public")
+	})
+
 	app.Start(1069)
 }

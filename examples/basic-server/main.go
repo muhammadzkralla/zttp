@@ -176,5 +176,5 @@ func main() {
 		res.Static("download.png", "./public")
 	})
 
-	app.Start(1069)
+	app.StartTls(1069, "cert.pem", "key.pem")
 }

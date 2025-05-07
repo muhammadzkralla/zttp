@@ -2,6 +2,7 @@ package zttp
 
 import (
 	"bufio"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -57,14 +58,50 @@ func (app *App) Start(port int) {
 	// Initiate the tcp server sockets
 	server, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
-		log.Println("err initiating server... " + err.Error())
+		log.Fatalf("err initiating server... %s", err.Error())
 	}
+
+	defer server.Close()
 
 	for {
 		// accept tcp socket connections indefinitely
 		socket, err := server.Accept()
 		if err != nil {
-			log.Println("err accepting socket")
+			log.Println("err accepting socket: ", err)
+			continue
+		}
+
+		// handle the connected client tcp socket in a goroutine
+		go handleClient(socket, app)
+	}
+}
+
+// Start listening securely to the given port
+func (app *App) StartTls(port int, certFile, keyFile string) {
+
+	// Load TLS certificate and key files
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		log.Fatalf("failed to load key pair: %s", err)
+	}
+
+	// Pass them to the TLS config
+	config := &tls.Config{Certificates: []tls.Certificate{cert}}
+
+	// Initiate the tcp server sockets securely
+	server, err := tls.Listen("tcp", fmt.Sprintf(":%d", port), config)
+	if err != nil {
+		log.Fatalf("failed to start TLS listener: %s", err)
+	}
+
+	defer server.Close()
+
+	for {
+		// accept tcp socket connections indefinitely
+		socket, err := server.Accept()
+		if err != nil {
+			log.Println("err accepting TLS connection:", err)
+			continue
 		}
 
 		// handle the connected client tcp socket in a goroutine

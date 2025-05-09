@@ -138,3 +138,39 @@ func TestParseQueries(t *testing.T) {
 		t.Errorf("Error in parsing third query")
 	}
 }
+
+// Test extracting the request cookies
+func TestExtractCookies(t *testing.T) {
+	headers := map[string]string{
+		"Header1": "header1",
+		"Header2": "header2",
+		"Cookie":  "sessionId=abc123; user=zkr;",
+		"Header3": "header3",
+		"header4": "header4",
+	}
+
+	cookies := extractCookies(headers)
+
+	if len(cookies) != 2 {
+		t.Errorf("Expected 2 cookies, but found: %d", len(cookies))
+	}
+
+	if cookies["sessionId"] != "abc123" || cookies["user"] != "zkr" {
+		t.Errorf("Queries don't match expectations")
+	}
+
+	headers = map[string]string{
+		"Cookie": "badcookie; valid=1; foo=bar=baz",
+	}
+
+	cookies = extractCookies(headers)
+
+	if len(cookies) != 1 {
+		t.Errorf("Expected 1 cookies, but found: %d", len(cookies))
+	}
+
+	if cookies["valid"] != "1" {
+		t.Errorf("Queries don't match expectations")
+	}
+
+}

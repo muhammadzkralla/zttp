@@ -122,6 +122,7 @@ func handleClient(socket net.Conn, app *App) {
 	requestParts := extractRequestLine(rdr, socket)
 	headers, contentLength := extractHeaders(rdr)
 	body := extractBody(rdr, contentLength)
+	cookies := extractCookies(headers)
 
 	// TODO: make extractRequestLine() return []string, bool instead
 	// NOTE: THIS WAS ADDED TO AVOID EMPTY TCP CONNECTIONS MADE BY POSTMAN
@@ -159,11 +160,12 @@ func handleClient(socket net.Conn, app *App) {
 			Headers: headers,
 			Params:  params,
 			Queries: queries,
+			Cookies: cookies,
 		}
 		res := Res{
 			Socket:          socket,
 			StatusCode:      200,
-			Headers:         make(map[string]string),
+			Headers:         make(map[string][]string),
 			PrettyPrintJSON: app.PrettyPrintJSON,
 		}
 

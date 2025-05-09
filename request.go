@@ -18,6 +18,7 @@ type Req struct {
 	Headers map[string]string
 	Params  map[string]string
 	Queries map[string]string
+	Cookies map[string]string
 }
 
 // Return the value of the passed header key
@@ -165,6 +166,26 @@ func extractQueries(rawPath string) map[string]string {
 	}
 
 	return queries
+}
+
+// Extract the request cookies from the request headers
+func extractCookies(headers map[string]string) map[string]string {
+	cookies := make(map[string]string)
+
+	if cookieHeader, ok := headers["Cookie"]; ok {
+		pairs := strings.Split(cookieHeader, ";")
+
+		for _, pair := range pairs {
+			pair = strings.TrimSpace(pair)
+			kv := strings.Split(pair, "=")
+
+			if len(kv) == 2 {
+				cookies[kv[0]] = kv[1]
+			}
+		}
+	}
+
+	return cookies
 }
 
 // Find the matched handler with the passed path from the router and parse params, if exist

@@ -13,15 +13,16 @@ import (
 )
 
 type Cookie struct {
-	Name     string
-	Value    string
-	Path     string
-	Domain   string
-	Expires  time.Time
-	MaxAge   int
-	Secure   bool
-	HttpOnly bool
-	SameSite string
+	Name        string    `json:"name"`
+	Value       string    `json:"value"`
+	Path        string    `json:"path"`
+	Domain      string    `json:"domain"`
+	Expires     time.Time `json:"expires"`
+	MaxAge      int       `json:"max_age"`
+	Secure      bool      `json:"secure"`
+	HttpOnly    bool      `json:"http_only"`
+	SameSite    string    `json:"same_site"`
+	SessionOnly bool      `json:"session_only"`
 }
 
 type Res struct {
@@ -148,6 +149,46 @@ func (res *Res) Header(key, value string) {
 	res.Headers[key] = append(res.Headers[key], value)
 }
 
+// Sets the response cookies
+func (res *Res) SetCookie(cookie Cookie) {
+	// Build the cookie string
+	cookieStr := fmt.Sprintf("%s=%s", cookie.Name, cookie.Value)
+
+	// Add optional attributes
+	if cookie.Path != "" {
+		cookieStr += fmt.Sprintf("; Path=%s", cookie.Path)
+	}
+	if cookie.Domain != "" {
+		cookieStr += fmt.Sprintf("; Domain=%s", cookie.Domain)
+	}
+	if !cookie.Expires.IsZero() {
+		cookieStr += fmt.Sprintf("; Expires=%s", cookie.Expires.UTC().Format(time.RFC1123))
+	}
+	if cookie.MaxAge > 0 {
+		cookieStr += fmt.Sprintf("; Max-Age=%d", cookie.MaxAge)
+	}
+	if cookie.Secure {
+		cookieStr += "; Secure"
+	}
+	if cookie.HttpOnly {
+		cookieStr += "; HttpOnly"
+	}
+	if cookie.SameSite != "" {
+		switch cookie.SameSite {
+		case "Strict", "Lax", "None":
+			cookieStr += fmt.Sprintf("; SameSite=%s", cookie.SameSite)
+		default:
+			log.Printf("Warning: Invalid SameSite value: %s", cookie.SameSite)
+		}
+	}
+	if cookie.SessionOnly {
+		cookieStr += "; SessionOnly=true"
+	}
+
+	// Append to headers
+	res.Header("Set-Cookie", cookieStr)
+}
+
 // Sets the status code of the current response
 func (res *Res) Status(code int) *Res {
 	res.StatusCode = code
@@ -170,6 +211,10 @@ func sendResponse(socket net.Conn, body []byte, code int, contentType string, he
 		}
 	}
 	fmt.Fprintf(socket, "\r\n")
+
+	if body == nil {
+		body = []byte{}
+	}
 
 	_, err := socket.Write(body)
 	if err != nil {

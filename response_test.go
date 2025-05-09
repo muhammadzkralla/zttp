@@ -3,6 +3,7 @@ package zttp
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 // A template user struct for testing
@@ -160,5 +161,62 @@ func TestStaticResponseServing(t *testing.T) {
 
 	if res.Headers["Content-Type"][0] != "image/png" {
 		t.Errorf("Expected header image/png, but got %s", res.Headers["Content-Type"][0])
+	}
+}
+
+func TestResponseCookies(t *testing.T) {
+
+	res := &Res{
+		Headers: map[string][]string{},
+	}
+
+	cookie := Cookie{
+		Name:        "super",
+		Value:       "cookie",
+		Path:        "/",
+		Domain:      "example.com",
+		Expires:     time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+		MaxAge:      86400,
+		Secure:      true,
+		HttpOnly:    true,
+		SameSite:    "Lax",
+		SessionOnly: true}
+
+	res.SetCookie(cookie)
+
+	cookies := res.Headers["Set-Cookie"]
+
+	if len(cookies) != 1 {
+		t.Errorf("Expected one cookies, but found %d", len(cookies))
+	}
+
+	cookieStr := cookies[0]
+	parts := strings.Split(cookieStr, "; ")
+
+	expectedParts := []string{
+		"super=cookie",
+		"Path=/",
+		"Domain=example.com",
+		"Expires=Wed, 01 Jan 2025 00:00:00 UTC",
+		"Max-Age=86400",
+		"Secure",
+		"HttpOnly",
+		"SameSite=Lax",
+		"SessionOnly=true",
+	}
+
+	if len(parts) != len(expectedParts) {
+		t.Errorf("Expected %d cookie parts, got %d", len(expectedParts), len(parts))
+	}
+
+	for i, part := range expectedParts {
+		if parts[i] != part {
+			t.Errorf("Part %d mismatch:\nExpected: %s\nGot:      %s", i, part, parts[i])
+		}
+	}
+
+	expectedCookie := "super=cookie; Path=/; Domain=example.com; Expires=Wed, 01 Jan 2025 00:00:00 UTC; Max-Age=86400; Secure; HttpOnly; SameSite=Lax; SessionOnly=true"
+	if cookieStr != expectedCookie {
+		t.Errorf("Cookie string mismatch:\nExpected: %s\nGot:      %s", expectedCookie, cookieStr)
 	}
 }

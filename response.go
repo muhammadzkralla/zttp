@@ -12,10 +12,22 @@ import (
 	"time"
 )
 
+type Cookie struct {
+	Name     string
+	Value    string
+	Path     string
+	Domain   string
+	Expires  time.Time
+	MaxAge   int
+	Secure   bool
+	HttpOnly bool
+	SameSite string
+}
+
 type Res struct {
 	Socket          net.Conn
 	StatusCode      int
-	Headers         map[string]string
+	Headers         map[string][]string
 	ContentType     string
 	PrettyPrintJSON bool
 }
@@ -105,7 +117,13 @@ func (res *Res) Static(path, root string) {
 	res.Header("Last-Modified", modTime.UTC().Format(http.TimeFormat))
 
 	// Handle If-Modified-Since header
-	if ifModifiedSince := res.Headers["If-Modified-Since"]; ifModifiedSince != "" {
+	ifModifiedSince := ""
+	ifModifiedSinceHeader, ok := res.Headers["If-Modified-Since"]
+	if ok {
+		ifModifiedSince = ifModifiedSinceHeader[0]
+	}
+
+	if ifModifiedSince != "" {
 		if t, err := time.Parse(http.TimeFormat, ifModifiedSince); err == nil {
 			if modTime.Before(t.Add(1 * time.Second)) {
 				res.Status(304).Send("")
@@ -127,7 +145,7 @@ func (res *Res) Static(path, root string) {
 
 // Sets the value of the passed header key
 func (res *Res) Header(key, value string) {
-	res.Headers[key] = value
+	res.Headers[key] = append(res.Headers[key], value)
 }
 
 // Sets the status code of the current response
@@ -137,7 +155,7 @@ func (res *Res) Status(code int) *Res {
 }
 
 // Writes the response data into the client tcp socket's buffer
-func sendResponse(socket net.Conn, body []byte, code int, contentType string, headers map[string]string) {
+func sendResponse(socket net.Conn, body []byte, code int, contentType string, headers map[string][]string) {
 	statusMessage := getHTTPStatusMessage(code)
 	fmt.Fprintf(socket, "HTTP/1.1 %d %s\r\n", code, statusMessage)
 	fmt.Fprintf(socket, "Content-Length: %d\r\n", len(body))
@@ -145,8 +163,10 @@ func sendResponse(socket net.Conn, body []byte, code int, contentType string, he
 
 	// If there's any extra response headers
 	if headers != nil {
-		for k, v := range headers {
-			fmt.Fprintf(socket, "%s: %s\r\n", k, v)
+		for k, values := range headers {
+			for _, v := range values {
+				fmt.Fprintf(socket, "%s: %s\r\n", k, v)
+			}
 		}
 	}
 	fmt.Fprintf(socket, "\r\n")

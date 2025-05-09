@@ -165,7 +165,7 @@ func handleClient(socket net.Conn, app *App) {
 		res := Res{
 			Socket:          socket,
 			StatusCode:      200,
-			Headers:         make(map[string]string),
+			Headers:         make(map[string][]string),
 			PrettyPrintJSON: app.PrettyPrintJSON,
 		}
 

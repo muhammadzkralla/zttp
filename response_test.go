@@ -81,14 +81,14 @@ func TestJson(t *testing.T) {
 // Test setting response headers
 func TestSetResponseHeaders(t *testing.T) {
 	res := Res{
-		Headers: make(map[string]string),
+		Headers: make(map[string][]string),
 	}
 
 	res.Header("Header1", "header1")
 	res.Header("Header1", "notheader1")
 	res.Header("Header2", "header2")
 
-	if res.Headers["Header1"] != "notheader1" || res.Headers["Header2"] != "header2" {
+	if res.Headers["Header1"][0] != "header1" || res.Headers["Header1"][1] != "notheader1" || res.Headers["Header2"][0] != "header2" {
 		t.Errorf("Error setting response headers")
 	}
 }
@@ -117,38 +117,48 @@ func TestStaticResponseServing(t *testing.T) {
 	conn := &MockConn{}
 	res := &Res{
 		Socket:  conn,
-		Headers: make(map[string]string),
+		Headers: make(map[string][]string),
 	}
 
 	res.Static("index.html", "./examples/basic-server/public")
 
 	output := string(conn.data)
 
-	if res.Headers["Content-Type"] != "text/html; charset=utf-8" {
-		t.Errorf("Expected header Content-Type: text/html; charset=utf-8, but got %s", res.Headers["Content-Type"])
+	if res.Headers["Content-Type"][0] != "text/html; charset=utf-8" {
+		t.Errorf("Expected header Content-Type: text/html; charset=utf-8, but got %s", res.Headers["Content-Type"][0])
 	}
 
 	if !strings.Contains(output, "<h1>Hello from static index file!</h1>") {
 		t.Errorf("Unexpected response body: %s", output)
 	}
 
+	res = &Res{
+		Socket:  conn,
+		Headers: make(map[string][]string),
+	}
+
 	res.Static("home.html", "./examples/basic-server/public")
 
 	output = string(conn.data)
 
-	if res.Headers["Content-Type"] != "text/html; charset=utf-8" {
-		t.Errorf("Expected header Content-Type: text/html; charset=utf-8, but got %s", res.Headers["Content-Type"])
+	if res.Headers["Content-Type"][0] != "text/html; charset=utf-8" {
+		t.Errorf("Expected header Content-Type: text/html; charset=utf-8, but got %s", res.Headers["Content-Type"][0])
 	}
 
 	if !strings.Contains(output, "<h1>Hello from static home file!</h1>") {
 		t.Errorf("Unexpected response body: %s", output)
 	}
 
+	res = &Res{
+		Socket:  conn,
+		Headers: make(map[string][]string),
+	}
+
 	res.Static("download.png", "./examples/basic-server/public")
 
 	output = string(conn.data)
 
-	if res.Headers["Content-Type"] != "image/png" {
-		t.Errorf("Expected header image/png, but got %s", res.Headers["Content-Type"])
+	if res.Headers["Content-Type"][0] != "image/png" {
+		t.Errorf("Expected header image/png, but got %s", res.Headers["Content-Type"][0])
 	}
 }

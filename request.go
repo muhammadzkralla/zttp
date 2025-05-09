@@ -177,7 +177,7 @@ func extractCookies(headers map[string]string) map[string]string {
 
 		for _, pair := range pairs {
 			pair = strings.TrimSpace(pair)
-			kv := strings.SplitN(pair, "=", 2)
+			kv := strings.Split(pair, "=")
 
 			if len(kv) == 2 {
 				cookies[kv[0]] = kv[1]

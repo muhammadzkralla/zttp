@@ -146,6 +146,10 @@ func (res *Res) Static(path, root string) {
 
 // Sets the value of the passed header key
 func (res *Res) Header(key, value string) {
+	if _, exists := res.Headers[key]; !exists {
+		res.Headers[key] = []string{}
+	}
+
 	res.Headers[key] = append(res.Headers[key], value)
 }
 

@@ -37,6 +37,14 @@ echo "\n"
 
 curl -i -X GET "localhost:1069/api/v1/home"
 echo "\n"
-
 curl -i -X POST "localhost:1069/api/v1/home/123/comment/comment1"
 echo "\n"
+
+curl -i -X GET "localhost:1069/static/index.html"
+echo "\n"
+curl -i -X GET "localhost:1069/static/home.html"
+echo "\n"
+curl -O "localhost:1069/static/download.png"
+echo "\n"
+
+curl -i -X GET "localhost:1069/"

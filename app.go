@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"strings"
+	"time"
 )
 
 type App struct {
@@ -118,59 +119,71 @@ func handleClient(socket net.Conn, app *App) {
 	// Buffer reader to read from the client tcp socket
 	rdr := bufio.NewReader(socket)
 
-	// Extract the request line, headers, and body
-	requestParts := extractRequestLine(rdr, socket)
-	headers, contentLength := extractHeaders(rdr)
-	body := extractBody(rdr, contentLength)
-	cookies := extractCookies(headers)
+	for {
+		// Set hard-coded read timeout for now
+		// TODO: Make it an app's config specification later
+		socket.SetReadDeadline(time.Now().Add(5 * time.Second))
 
-	// TODO: make extractRequestLine() return []string, bool instead
-	// NOTE: THIS WAS ADDED TO AVOID EMPTY TCP CONNECTIONS MADE BY POSTMAN
-	// I think this is somehow related to the keep-alive request header
-	// I will figure it out later
-	if len(requestParts) < 2 {
-		// Request was already handled and response sent, so just return
-		return
-	}
-
-	// Extract the method and the raw path from the request line
-	method := requestParts[0]
-	rawPath := requestParts[1]
-
-	path := rawPath
-	queries := make(map[string]string)
-
-	// Extract queries, if exist
-	if strings.Contains(rawPath, "?") {
-		split := strings.SplitN(rawPath, "?", 2)
-		path = split[0]
-		queries = extractQueries(split[1])
-	}
-
-	// Find the matched handler from the router with parsing params, if exist
-	handler, params := findHandler(method, path, socket, app)
-
-	// If a handler matched, call it with the generated request and response objects
-	// Otherwise, send a 404 not found response
-	if handler != nil {
-		req := Req{
-			Method:  method,
-			Path:    path,
-			Body:    body,
-			Headers: headers,
-			Params:  params,
-			Queries: queries,
-			Cookies: cookies,
-		}
-		res := Res{
-			Socket:          socket,
-			StatusCode:      200,
-			Headers:         make(map[string][]string),
-			PrettyPrintJSON: app.PrettyPrintJSON,
+		// Extract the request line, headers, and body
+		requestParts := extractRequestLine(rdr, socket)
+		// TODO: make extractRequestLine() return []string, bool instead
+		// NOTE: THIS WAS ADDED TO AVOID EMPTY TCP CONNECTIONS MADE BY POSTMAN
+		// I think this is somehow related to the keep-alive request header
+		// I will figure it out later
+		if len(requestParts) < 2 {
+			// Request was already handled and response sent, so just return
+			return
 		}
 
-		handler(req, res)
-	} else {
-		sendResponse(socket, []byte("Not Found"), 404, "text/plain", nil)
+		headers, contentLength := extractHeaders(rdr)
+		body := extractBody(rdr, contentLength)
+		cookies := extractCookies(headers)
+
+		// Extract the method and the raw path from the request line
+		method := requestParts[0]
+		rawPath := requestParts[1]
+
+		path := rawPath
+		queries := make(map[string]string)
+
+		// Extract queries, if exist
+		if strings.Contains(rawPath, "?") {
+			split := strings.SplitN(rawPath, "?", 2)
+			path = split[0]
+			queries = extractQueries(split[1])
+		}
+
+		// Find the matched handler from the router with parsing params, if exist
+		handler, params := findHandler(method, path, socket, app)
+
+		// If a handler matched, call it with the generated request and response objects
+		// Otherwise, send a 404 not found response
+		if handler != nil {
+			req := Req{
+				Method:  method,
+				Path:    path,
+				Body:    body,
+				Headers: headers,
+				Params:  params,
+				Queries: queries,
+				Cookies: cookies,
+			}
+			res := Res{
+				Socket:          socket,
+				StatusCode:      200,
+				Headers:         make(map[string][]string),
+				PrettyPrintJSON: app.PrettyPrintJSON,
+			}
+
+			handler(req, res)
+		} else {
+			sendResponse(socket, []byte("Not Found"), 404, "text/plain", nil)
+		}
+
+		// Check if client requested connection close
+		connectionHeader := strings.ToLower(headers["Connection"])
+		if connectionHeader == "close" {
+			return
+		}
 	}
 }

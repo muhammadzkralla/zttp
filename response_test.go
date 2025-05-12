@@ -26,8 +26,8 @@ func TestSendResponse(t *testing.T) {
 
 	// Expected response body
 	expected := "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nOK"
-	if string(conn.data) != expected {
-		t.Errorf("Expected response %s, but got %s", expected, string(conn.data))
+	if string(conn.outBuf) != expected {
+		t.Errorf("Expected response %s, but got %s", expected, string(conn.outBuf))
 	}
 }
 
@@ -48,8 +48,8 @@ func TestSendJsonResponse(t *testing.T) {
 	res.Json(data)
 
 	// Expected response body
-	if !strings.Contains(string(conn.data), `"message":"OK"`) {
-		t.Errorf("Expected JSON response, but got %s", string(conn.data))
+	if !strings.Contains(string(conn.outBuf), `"message":"OK"`) {
+		t.Errorf("Expected JSON response, but got %s", string(conn.outBuf))
 	}
 }
 
@@ -68,7 +68,7 @@ func TestJson(t *testing.T) {
 
 	res.Json(user)
 
-	output := string(conn.data)
+	output := string(conn.outBuf)
 
 	if !strings.Contains(output, "Content-Type: application/json") {
 		t.Errorf("Expected JSON content type, but got %s", output)
@@ -123,7 +123,7 @@ func TestStaticResponseServing(t *testing.T) {
 
 	res.Static("index.html", "./examples/basic-server/public")
 
-	output := string(conn.data)
+	output := string(conn.outBuf)
 
 	if res.Headers["Content-Type"][0] != "text/html; charset=utf-8" {
 		t.Errorf("Expected header Content-Type: text/html; charset=utf-8, but got %s", res.Headers["Content-Type"][0])
@@ -140,7 +140,7 @@ func TestStaticResponseServing(t *testing.T) {
 
 	res.Static("home.html", "./examples/basic-server/public")
 
-	output = string(conn.data)
+	output = string(conn.outBuf)
 
 	if res.Headers["Content-Type"][0] != "text/html; charset=utf-8" {
 		t.Errorf("Expected header Content-Type: text/html; charset=utf-8, but got %s", res.Headers["Content-Type"][0])
@@ -157,7 +157,7 @@ func TestStaticResponseServing(t *testing.T) {
 
 	res.Static("download.png", "./examples/basic-server/public")
 
-	output = string(conn.data)
+	output = string(conn.outBuf)
 
 	if res.Headers["Content-Type"][0] != "image/png" {
 		t.Errorf("Expected header image/png, but got %s", res.Headers["Content-Type"][0])

@@ -122,7 +122,10 @@ func handleClient(socket net.Conn, app *App) {
 	for {
 		// Set hard-coded read timeout for now
 		// TODO: Make it an app's config specification later
-		socket.SetReadDeadline(time.Now().Add(5 * time.Second))
+		if err := socket.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+			log.Printf("Error setting read deadline: %v", err)
+			return
+		}
 
 		// Extract the request line, headers, and body
 		requestParts := extractRequestLine(rdr, socket)

@@ -190,5 +190,9 @@ func main() {
 		res.Status(200).Send("Ok")
 	})
 
+	app.Get("/panic", func(req zttp.Req, res zttp.Res) {
+		panic("something went very wrong")
+	})
+
 	app.Start(1069)
 }

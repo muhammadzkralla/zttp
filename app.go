@@ -114,7 +114,13 @@ func (app *App) StartTls(port int, certFile, keyFile string) {
 // This function is responsible for handling the incoming request from the client tcp socket
 // from the beginning until it sends a response and close the connection eventually
 func handleClient(socket net.Conn, app *App) {
-	defer socket.Close()
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Recovered from panic: %v", r)
+			sendResponse(socket, []byte("Internal Server Error"), 500, "text/plain", nil)
+		}
+		socket.Close()
+	}()
 
 	// Buffer reader to read from the client tcp socket
 	rdr := bufio.NewReader(socket)

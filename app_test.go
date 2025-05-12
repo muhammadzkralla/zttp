@@ -2,24 +2,33 @@ package zttp
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"time"
 )
 
 // Mock of net.Conn struct following the net.Conn interface specifications
 type MockConn struct {
-	data []byte
+	outBuf     []byte
+	inBuf      []byte
+	readOffset int
 }
 
 // All these functions are mocked to follow the net.Conn interface specifications
 // for testing purposes only
 func (m *MockConn) Read(p []byte) (n int, err error) {
-	copy(p, m.data)
-	return len(m.data), nil
+	if m.readOffset >= len(m.inBuf) {
+		// No more data to read
+		return 0, io.EOF
+	}
+
+	n = copy(p, m.inBuf[m.readOffset:])
+	m.readOffset += n
+	return n, nil
 }
 
 func (m *MockConn) Write(p []byte) (n int, err error) {
-	m.data = append(m.data, p...)
+	m.outBuf = append(m.outBuf, p...)
 	return len(p), nil
 }
 
@@ -51,10 +60,10 @@ func (m *MockConn) SetWriteDeadline(t time.Time) error {
 func mockRequest(app *App, method, path, body string) string {
 	conn := &MockConn{}
 	req := fmt.Sprintf("%s %s HTTP/1.1\r\nContent-Length: %d\r\n\r\n%s", method, path, len(body), body)
-	conn.data = []byte(req)
+	conn.inBuf = []byte(req)
 
 	// Call handleClient with the mocked connection
 	handleClient(conn, app)
 
-	return string(conn.data)
+	return string(conn.outBuf)
 }

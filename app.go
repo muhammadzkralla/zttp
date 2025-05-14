@@ -184,6 +184,14 @@ func handleClient(socket net.Conn, app *App) {
 				PrettyPrintJSON: app.PrettyPrintJSON,
 			}
 
+			ctx := &Ctx{
+				Req: req,
+				Res: res,
+			}
+
+			req.Ctx = ctx
+			res.Ctx = ctx
+
 			handler(req, res)
 		} else {
 			sendResponse(socket, []byte("Not Found"), 404, "text/plain", nil)

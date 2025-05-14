@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"testing"
+	"time"
 )
 
 // Test extracting a specific request header
@@ -173,4 +174,329 @@ func TestExtractCookies(t *testing.T) {
 		t.Errorf("Queries don't match expectations")
 	}
 
+}
+
+func TestFresh(t *testing.T) {
+	httpTimeFormat := "Mon, 02 Jan 2006 15:04:05 GMT"
+
+	now := time.Now().UTC()
+	lastModified := now.Format(httpTimeFormat)
+	oldModified := now.Add(-24 * time.Hour).Format(httpTimeFormat)
+	futureModified := now.Add(24 * time.Hour).Format(httpTimeFormat)
+
+	tests := []struct {
+		name        string
+		reqHeaders  map[string]string   // request headers (single values)
+		resHeaders  map[string][]string // response headers (slice values)
+		expected    bool
+		description string
+	}{
+		{
+			name:       "Unconditional request",
+			reqHeaders: map[string]string{},
+			resHeaders: map[string][]string{
+				"ETag":          {`"abc"`},
+				"Last-Modified": {lastModified},
+			},
+			expected:    false,
+			description: "Should return false when no conditional headers",
+		},
+		{
+			name:        "ETag match",
+			reqHeaders:  map[string]string{"If-None-Match": `"abc"`},
+			resHeaders:  map[string][]string{"ETag": {`"abc"`}},
+			expected:    true,
+			description: "Should return true when ETag matches",
+		},
+		{
+			name:        "Weak ETag match",
+			reqHeaders:  map[string]string{"If-None-Match": `W/"abc"`},
+			resHeaders:  map[string][]string{"ETag": {`"abc"`}},
+			expected:    true,
+			description: "Should handle weak ETag comparison",
+		},
+		{
+			name:        "If-Modified-Since newer",
+			reqHeaders:  map[string]string{"If-Modified-Since": futureModified},
+			resHeaders:  map[string][]string{"Last-Modified": {lastModified}},
+			expected:    true,
+			description: "Should return true when resource not modified since",
+		},
+		{
+			name:        "If-Modified-Since older",
+			reqHeaders:  map[string]string{"If-Modified-Since": oldModified},
+			resHeaders:  map[string][]string{"Last-Modified": {lastModified}},
+			expected:    false,
+			description: "Should return false when resource was modified",
+		},
+		{
+			name: "No-Cache directive",
+			reqHeaders: map[string]string{
+				"If-None-Match": `"abc"`,
+				"Cache-Control": "no-cache",
+			},
+			resHeaders:  map[string][]string{"ETag": {`"abc"`}},
+			expected:    false,
+			description: "Should bypass cache when no-cache present",
+		},
+		// Case 1: Only If-None-Match (matches)
+		{
+			name: "If-None-Match match",
+			reqHeaders: map[string]string{
+				"If-None-Match": "version1",
+			},
+			resHeaders: map[string][]string{
+				"ETag":          {"version1"},
+				"Last-Modified": {lastModified},
+			},
+			expected:    true,
+			description: "ETag match should return 304",
+		},
+
+		// Case 2: If-None-Match + If-Modified-Since (same date)
+		{
+			name: "If-None-Match with same modified date",
+			reqHeaders: map[string]string{
+				"If-None-Match":     "version1",
+				"If-Modified-Since": lastModified,
+			},
+			resHeaders: map[string][]string{
+				"ETag":          {"version1"},
+				"Last-Modified": {lastModified},
+			},
+			expected:    true,
+			description: "ETag match with same date should return 304",
+		},
+
+		// Case 3: If-None-Match + older If-Modified-Since
+		{
+			name: "If-None-Match with older date",
+			reqHeaders: map[string]string{
+				"If-None-Match":     "version1",
+				"If-Modified-Since": oldModified,
+			},
+			resHeaders: map[string][]string{
+				"ETag":          {"version1"},
+				"Last-Modified": {lastModified},
+			},
+			expected:    true,
+			description: "ETag match should override older modified date",
+		},
+
+		// Case 4: If-None-Match + newer If-Modified-Since
+		{
+			name: "If-None-Match with newer date",
+			reqHeaders: map[string]string{
+				"If-None-Match":     "version1",
+				"If-Modified-Since": futureModified,
+			},
+			resHeaders: map[string][]string{
+				"ETag":          {"version1"},
+				"Last-Modified": {lastModified},
+			},
+			expected:    true,
+			description: "ETag match should override newer modified date",
+		},
+
+		// Case 5: Only If-Modified-Since (same date)
+		{
+			name: "Only If-Modified-Since (same date)",
+			reqHeaders: map[string]string{
+				"If-Modified-Since": lastModified,
+			},
+			resHeaders: map[string][]string{
+				"ETag":          {"version1"},
+				"Last-Modified": {lastModified},
+			},
+			expected:    true,
+			description: "Same modified date should return 304",
+		},
+
+		// Case 6: Only If-Modified-Since (newer date)
+		{
+			name: "Only If-Modified-Since (newer date)",
+			reqHeaders: map[string]string{
+				"If-Modified-Since": futureModified,
+			},
+			resHeaders: map[string][]string{
+				"ETag":          {"version1"},
+				"Last-Modified": {lastModified},
+			},
+			expected:    true,
+			description: "Newer modified date should return 304",
+		},
+
+		// Case 7: Only If-Modified-Since (older date)
+		{
+			name: "Only If-Modified-Since (older date)",
+			reqHeaders: map[string]string{
+				"If-Modified-Since": oldModified,
+			},
+			resHeaders: map[string][]string{
+				"ETag":          {"version1"},
+				"Last-Modified": {lastModified},
+			},
+			expected:    false,
+			description: "Older modified date should return 200",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := &Req{
+				Headers: tt.reqHeaders,
+				Ctx: &Ctx{
+					Req: &Req{
+						Headers: tt.reqHeaders,
+					},
+					Res: &Res{
+						Headers: tt.resHeaders,
+					},
+				},
+			}
+
+			if got := req.Fresh(); got != tt.expected {
+				t.Errorf("%s\nFresh() = %v, want %v", tt.description, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestCompareETags(t *testing.T) {
+	tests := []struct {
+		client   string
+		server   string
+		expected bool
+	}{
+		{`"abc"`, `"abc"`, true},
+		{`W/"abc"`, `"abc"`, true},
+		{`"abc"`, `W/"abc"`, true},
+		{`W/"abc"`, `W/"abc"`, true},
+		{`"abc"`, `"xyz"`, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.client+" vs "+tt.server, func(t *testing.T) {
+			if got := compareETags(tt.client, tt.server); got != tt.expected {
+				t.Errorf("compareETags(%q, %q) = %v, want %v", tt.client, tt.server, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsEtagStale(t *testing.T) {
+	tests := []struct {
+		name        string
+		etag        string
+		noneMatch   string
+		expected    bool
+		description string
+	}{
+		// Exact matches
+		{
+			name:        "Strong match",
+			etag:        `"abc"`,
+			noneMatch:   `"abc"`,
+			expected:    false,
+			description: "Exact strong ETag match should be fresh",
+		},
+		{
+			name:        "Weak match",
+			etag:        `W/"abc"`,
+			noneMatch:   `W/"abc"`,
+			expected:    false,
+			description: "Exact weak ETag match should be fresh",
+		},
+
+		// Weak comparison rules (RFC 7232 Section 2.3.2)
+		{
+			name:        "Weak vs strong match",
+			etag:        `"abc"`,
+			noneMatch:   `W/"abc"`,
+			expected:    false,
+			description: "Weak comparison should match strong ETag",
+		},
+		{
+			name:        "Strong vs weak match",
+			etag:        `W/"abc"`,
+			noneMatch:   `"abc"`,
+			expected:    false,
+			description: "Weak ETag should match strong comparison",
+		},
+
+		// Multiple ETags
+		{
+			name:        "Multiple ETags with match",
+			etag:        `"xyz"`,
+			noneMatch:   `"abc", "xyz"`,
+			expected:    false,
+			description: "Should match when one of multiple ETags matches",
+		},
+		{
+			name:        "Multiple ETags no match",
+			etag:        `"123"`,
+			noneMatch:   `"abc", "xyz"`,
+			expected:    true,
+			description: "Should be stale when no ETags match",
+		},
+
+		// Special cases
+		// {
+		// 	name:        "Wildcard match",
+		// 	etag:        `"any"`,
+		// 	noneMatch:   `*`,
+		// 	expected:    false,
+		// 	description: "Wildcard should match any ETag",
+		// },
+		{
+			name:        "Empty If-None-Match",
+			etag:        `"abc"`,
+			noneMatch:   ``,
+			expected:    true,
+			description: "Empty header should be stale",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isEtagStale(tt.etag, []byte(tt.noneMatch))
+			if result != tt.expected {
+				t.Errorf("%s\nisEtagStale(%q, %q) = %v, want %v",
+					tt.description, tt.etag, tt.noneMatch, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestHasNoCacheDirective(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+		desc     string
+	}{
+		// Exact matches
+		{"no-cache", true, "exact match"},
+		{" no-cache ", true, "with spaces"},
+		{"public, no-cache", true, "in list"},
+		{"no-cache, must-revalidate", true, "first in list"},
+
+		// Invalid cases
+		{"nocache", false, "missing hyphen"},
+		{"no-cachex", false, "suffix characters"},
+		{"xno-cache", false, "prefix characters"},
+		{"no--cache", false, "double hyphen"},
+
+		// Edge cases
+		{"no-cache=", false, "with equals"},
+		{"NO-CACHE", false, "case sensitive"},
+		{"", false, "empty string"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			if got := hasNoCacheDirective(tt.input); got != tt.expected {
+				t.Errorf("hasNoCacheDirective(%q) = %v, want %v", tt.input, got, tt.expected)
+			}
+		})
+	}
 }

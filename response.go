@@ -31,6 +31,7 @@ type Res struct {
 	Headers         map[string][]string
 	ContentType     string
 	PrettyPrintJSON bool
+	*Ctx
 }
 
 // This function sends a text/plain response body
@@ -144,6 +145,15 @@ func (res *Res) Static(path, root string) {
 	res.Send(string(content))
 }
 
+// This function ends the current response
+func (res *Res) End() {
+	if res.ContentType == "" {
+		res.ContentType = "text/plain; charset=utf-8"
+	}
+
+	sendResponse(res.Socket, []byte(""), res.StatusCode, res.ContentType, res.Headers)
+}
+
 // Sets the value of the passed header key
 func (res *Res) Header(key, value string) *Res {
 	if _, exists := res.Headers[key]; !exists {
@@ -236,6 +246,7 @@ func getHTTPStatusMessage(code int) string {
 	statusMessages := map[int]string{
 		200: "OK",
 		201: "Created",
+		304: "Not Modified",
 		400: "Bad Request",
 		404: "Not Found",
 		500: "Internal Server Error",

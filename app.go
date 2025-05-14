@@ -168,7 +168,7 @@ func handleClient(socket net.Conn, app *App) {
 		// If a handler matched, call it with the generated request and response objects
 		// Otherwise, send a 404 not found response
 		if handler != nil {
-			req := Req{
+			req := &Req{
 				Method:  method,
 				Path:    path,
 				Body:    body,
@@ -177,7 +177,7 @@ func handleClient(socket net.Conn, app *App) {
 				Queries: queries,
 				Cookies: cookies,
 			}
-			res := Res{
+			res := &Res{
 				Socket:          socket,
 				StatusCode:      200,
 				Headers:         make(map[string][]string),

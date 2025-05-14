@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-type Handler func(req Req, res Res)
+type Handler func(req *Req, res *Res)
 
 type Route struct {
 	path    string

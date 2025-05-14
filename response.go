@@ -145,16 +145,18 @@ func (res *Res) Static(path, root string) {
 }
 
 // Sets the value of the passed header key
-func (res *Res) Header(key, value string) {
+func (res *Res) Header(key, value string) *Res {
 	if _, exists := res.Headers[key]; !exists {
 		res.Headers[key] = []string{}
 	}
 
 	res.Headers[key] = append(res.Headers[key], value)
+
+	return res
 }
 
 // Sets the response cookies
-func (res *Res) SetCookie(cookie Cookie) {
+func (res *Res) SetCookie(cookie Cookie) *Res {
 	// Build the cookie string
 	cookieStr := fmt.Sprintf("%s=%s", cookie.Name, cookie.Value)
 
@@ -191,6 +193,8 @@ func (res *Res) SetCookie(cookie Cookie) {
 
 	// Append to headers
 	res.Header("Set-Cookie", cookieStr)
+
+	return res
 }
 
 // Sets the status code of the current response

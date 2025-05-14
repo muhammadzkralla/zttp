@@ -10,7 +10,7 @@ func TestGetRouteMatching(t *testing.T) {
 	app := NewApp()
 
 	// Mock a GET handler
-	app.Get("/test", func(req Req, res Res) {
+	app.Get("/test", func(req *Req, res *Res) {
 		res.Send("GET route matched")
 	})
 
@@ -27,7 +27,7 @@ func TestDeleteRouteMatching(t *testing.T) {
 	app := NewApp()
 
 	// Mock a DELETE handler
-	app.Delete("/test", func(req Req, res Res) {
+	app.Delete("/test", func(req *Req, res *Res) {
 		res.Send("DELETE route matched")
 	})
 
@@ -44,7 +44,7 @@ func TestPostRouteMatching(t *testing.T) {
 	app := NewApp()
 
 	// Mock a POST handler
-	app.Post("/test", func(req Req, res Res) {
+	app.Post("/test", func(req *Req, res *Res) {
 		res.Send("POST route matched")
 	})
 
@@ -61,7 +61,7 @@ func TestPutRouteMatching(t *testing.T) {
 	app := NewApp()
 
 	// Mock a PUT handler
-	app.Put("/test", func(req Req, res Res) {
+	app.Put("/test", func(req *Req, res *Res) {
 		res.Send("PUT route matched")
 	})
 
@@ -78,7 +78,7 @@ func TestPatchRouteMatching(t *testing.T) {
 	app := NewApp()
 
 	// Mock a PATCH handler
-	app.Patch("/test", func(req Req, res Res) {
+	app.Patch("/test", func(req *Req, res *Res) {
 		res.Send("PATCH route matched")
 	})
 
@@ -95,14 +95,14 @@ func TestDynamicRouting(t *testing.T) {
 	app := NewApp()
 
 	// Mock a GET handler
-	app.Get("/test/:postId/comment/:commentId", func(req Req, res Res) {
+	app.Get("/test/:postId/comment/:commentId", func(req *Req, res *Res) {
 		postId := req.Params["postId"]
 		commentId := req.Params["commentId"]
 		res.Send("Post ID: " + postId + ", Comment ID: " + commentId)
 	})
 
 	// Mock a POST handler
-	app.Post("/test/:postId/comment/:commentId", func(req Req, res Res) {
+	app.Post("/test/:postId/comment/:commentId", func(req *Req, res *Res) {
 		postId := req.Params["postId"]
 		commentId := req.Params["commentId"]
 		res.Send("Post ID: " + postId + ", Comment ID: " + commentId)
@@ -137,11 +137,11 @@ func TestCustomRouter(t *testing.T) {
 
 	router := app.NewRouter("/api/v1")
 
-	router.Get("/home", func(req Req, res Res) {
+	router.Get("/home", func(req *Req, res *Res) {
 		res.Status(200).Send("/api/v1/home get found")
 	})
 
-	router.Post("/home/:postId/comment/:commentId", func(req Req, res Res) {
+	router.Post("/home/:postId/comment/:commentId", func(req *Req, res *Res) {
 		res.Status(201).Send("/api/v1/home post found with postId: " + req.Param("postId") + " and commentId: " + req.Param("commentId"))
 	})
 

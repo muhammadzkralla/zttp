@@ -10,24 +10,24 @@ func TestMiddleware(t *testing.T) {
 	app := NewApp()
 
 	// Global middleware
-	app.Use(func(req Req, res Res, next func()) {
+	app.Use(func(req *Req, res *Res, next func()) {
 		res.Send("GlobalMiddleware\n")
 		next()
 	})
 
 	// Path-specific middleware
-	app.Use("/api", func(req Req, res Res, next func()) {
+	app.Use("/api", func(req *Req, res *Res, next func()) {
 		res.Send("ApiMiddleware\n")
 		next()
 	})
 
 	// /test should only trigger global middleware
-	app.Get("/test", func(req Req, res Res) {
+	app.Get("/test", func(req *Req, res *Res) {
 		res.Send("Handler: /test")
 	})
 
 	// /api should trigger both global and /api middleware
-	app.Get("/api", func(req Req, res Res) {
+	app.Get("/api", func(req *Req, res *Res) {
 		res.Send("Handler: /api")
 	})
 
@@ -52,7 +52,7 @@ func TestRouterMiddlewares(t *testing.T) {
 	app := NewApp()
 
 	// Global middleware
-	app.Use(func(req Req, res Res, next func()) {
+	app.Use(func(req *Req, res *Res, next func()) {
 		res.Header("GlobalMiddleware", "true")
 		next()
 	})
@@ -60,16 +60,16 @@ func TestRouterMiddlewares(t *testing.T) {
 	router := app.NewRouter("/api/v1")
 
 	// Router middleware
-	router.Use(func(req Req, res Res, next func()) {
+	router.Use(func(req *Req, res *Res, next func()) {
 		res.Header("RouterMiddleware", "true")
 		next()
 	})
 
-	router.Get("/test", func(req Req, res Res) {
+	router.Get("/test", func(req *Req, res *Res) {
 		res.Status(200).Send("")
 	})
 
-	app.Get("/test", func(req Req, res Res) {
+	app.Get("/test", func(req *Req, res *Res) {
 		res.Status(200).Send("")
 	})
 

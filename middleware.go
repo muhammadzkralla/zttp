@@ -1,6 +1,6 @@
 package zttp
 
-type Middleware func(req Req, res Res, next func())
+type Middleware func(req *Req, res *Res, next func())
 
 // MiddlewareWrapper wraps a Middleware with a certain path
 // If the path is empty, the middleware will be applied globally to all requests
@@ -11,8 +11,8 @@ type MiddlewareWrapper struct {
 }
 
 // Use registers a middleware function with the app
-// Example1: app.Use(func(req, res, next) { ... })
-// Example2: app.Use("/admin", func(req, res, next) { ... })
+// Example1: app.Use(func(req *zttp.Req, res *zttp.Res, next) { ... })
+// Example2: app.Use("/admin", func(req *zttp.Req, res *zttp.Res, next) { ... })
 // Otherwise it will panic, don't panic her, please :)
 func (app *App) Use(args ...any) {
 	path := ""
@@ -21,7 +21,7 @@ func (app *App) Use(args ...any) {
 	// If only one arg is passed, it's expected to be the middleware itself
 	// Otherwise, the first arg is expected to be the path and the other is the middleware
 	if len(args) == 1 {
-		m, ok := args[0].(func(Req, Res, func()))
+		m, ok := args[0].(func(*Req, *Res, func()))
 		if !ok {
 			panic("Invalid argument: expected handler function")
 		}
@@ -29,7 +29,7 @@ func (app *App) Use(args ...any) {
 		middleware = m
 	} else if len(args) == 2 {
 		p, ok1 := args[0].(string)
-		m, ok2 := args[1].(func(Req, Res, func()))
+		m, ok2 := args[1].(func(*Req, *Res, func()))
 		if !ok1 || !ok2 {
 			panic("Invalid arguments: expected string path and handler function")
 		}
@@ -49,8 +49,8 @@ func (app *App) Use(args ...any) {
 }
 
 // Use registers a middleware function with the router
-// Example1: router.Use(func(req, res, next) { ... })
-// Example2: router.Use("/admin", func(req, res, next) { ... })
+// Example1: router.Use(func(req *zttp.Req, res *zttp.Res, next) { ... })
+// Example2: router.Use("/admin", func(req *zttp.Req, res *zttp.Res, next) { ... })
 // Otherwise it will panic, don't panic her, please :)
 func (router *Router) Use(args ...any) {
 	path := ""
@@ -59,7 +59,7 @@ func (router *Router) Use(args ...any) {
 	// If only one arg is passed, it's expected to be the middleware itself
 	// Otherwise, the first arg is expected to be the path and the other is the middleware
 	if len(args) == 1 {
-		m, ok := args[0].(func(Req, Res, func()))
+		m, ok := args[0].(func(*Req, *Res, func()))
 		if !ok {
 			panic("Invalid argument: expected handler function")
 		}
@@ -67,7 +67,7 @@ func (router *Router) Use(args ...any) {
 		middleware = m
 	} else if len(args) == 2 {
 		p, ok1 := args[0].(string)
-		m, ok2 := args[1].(func(Req, Res, func()))
+		m, ok2 := args[1].(func(*Req, *Res, func()))
 		if !ok1 || !ok2 {
 			panic("Invalid arguments: expected string path and handler function")
 		}
@@ -90,7 +90,7 @@ func (router *Router) Use(args ...any) {
 func applyMiddleware(finalHandler Handler, router *Router) Handler {
 
 	// The req and res arguments are the ones created in the server file
-	return func(req Req, res Res) {
+	return func(req *Req, res *Res) {
 
 		// Store the index of the current middleware globally before incrementing it recursively
 		currentMiddlewareIdx := 0

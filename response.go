@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"mime"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
@@ -111,7 +111,10 @@ func (res *Res) Static(path, root string) {
 
 	// Set content type based on file extension
 	ext := filepath.Ext(fullPath)
-	res.ContentType = getContentType(ext)
+	res.ContentType = mime.TypeByExtension(ext)
+	if res.ContentType == "" {
+		res.ContentType = "application/octet-stream"
+	}
 	res.Header("Content-Type", res.ContentType)
 
 	// Set Last-Modified header
@@ -215,7 +218,7 @@ func (res *Res) Status(code int) *Res {
 
 // Writes the response data into the client tcp socket's buffer
 func sendResponse(socket net.Conn, body []byte, code int, contentType string, headers map[string][]string) {
-	statusMessage := getHTTPStatusMessage(code)
+	statusMessage := http.StatusText(code)
 	fmt.Fprintf(socket, "HTTP/1.1 %d %s\r\n", code, statusMessage)
 	fmt.Fprintf(socket, "Content-Length: %d\r\n", len(body))
 	fmt.Fprintf(socket, "Content-Type: %s\r\n", contentType)
@@ -237,51 +240,5 @@ func sendResponse(socket net.Conn, body []byte, code int, contentType string, he
 	_, err := socket.Write(body)
 	if err != nil {
 		log.Println("Error writing response body:", err)
-	}
-}
-
-// Translate the given status code into an HTTP status message
-// TODO: must be extended with more codes
-func getHTTPStatusMessage(code int) string {
-	statusMessages := map[int]string{
-		200: "OK",
-		201: "Created",
-		304: "Not Modified",
-		400: "Bad Request",
-		404: "Not Found",
-		500: "Internal Server Error",
-	}
-	if msg, exists := statusMessages[code]; exists {
-		return msg
-	}
-	return "Unknown Status"
-}
-
-// Translate the given extension into an HTTP response Content-Type header
-// TODO: must be extended with more types
-func getContentType(ext string) string {
-	switch strings.ToLower(ext) {
-	case ".html", ".htm":
-		return "text/html; charset=utf-8"
-	case ".css":
-		return "text/css; charset=utf-8"
-	case ".js":
-		return "application/javascript"
-	case ".json":
-		return "application/json"
-	case ".png":
-		return "image/png"
-	case ".jpg", ".jpeg":
-		return "image/jpeg"
-	case ".gif":
-		return "image/gif"
-	case ".svg":
-		return "image/svg+xml"
-	case ".ico":
-		return "image/x-icon"
-	case ".txt":
-		return "text/plain; charset=utf-8"
-	default:
-		return "application/octet-stream"
 	}
 }

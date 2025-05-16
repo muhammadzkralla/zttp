@@ -112,6 +112,9 @@ func (res *Res) Static(path, root string) {
 	// Set content type based on file extension
 	ext := filepath.Ext(fullPath)
 	res.ContentType = mime.TypeByExtension(ext)
+	if res.ContentType == "" {
+		res.ContentType = "application/octet-stream"
+	}
 	res.Header("Content-Type", res.ContentType)
 
 	// Set Last-Modified header

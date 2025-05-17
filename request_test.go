@@ -3,6 +3,10 @@ package zttp
 import (
 	"bufio"
 	"bytes"
+	"fmt"
+	"io"
+	"mime/multipart"
+	"net/textproto"
 	"testing"
 	"time"
 )
@@ -498,5 +502,277 @@ func TestHasNoCacheDirective(t *testing.T) {
 				t.Errorf("hasNoCacheDirective(%q) = %v, want %v", tt.input, got, tt.expected)
 			}
 		})
+	}
+}
+
+func TestFormValue(t *testing.T) {
+	// Create a test multipart form
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// Add form fields
+	writer.WriteField("username", "zkrallah")
+	writer.WriteField("email", "zkrallah@zttp.com")
+	writer.Close()
+
+	tests := []struct {
+		name     string
+		req      *Req
+		key      string
+		expected string
+	}{
+		{
+			name: "Existing field",
+			req: &Req{
+				Headers: map[string]string{
+					"Content-Type": fmt.Sprintf("multipart/form-data; boundary=%s", writer.Boundary()),
+				},
+				Body: body.String(),
+			},
+			key:      "username",
+			expected: "zkrallah",
+		},
+		{
+			name: "Non-existent field",
+			req: &Req{
+				Headers: map[string]string{
+					"Content-Type": fmt.Sprintf("multipart/form-data; boundary=%s", writer.Boundary()),
+				},
+				Body: body.String(),
+			},
+			key:      "nonexistent",
+			expected: "",
+		},
+		{
+			name: "Non-multipart request",
+			req: &Req{
+				Headers: map[string]string{
+					"Content-Type": "application/json",
+				},
+				Body: "{}",
+			},
+			key:      "username",
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.req.FormValue(tt.key); got != tt.expected {
+				t.Errorf("FormValue(%q) = %v, want %v", tt.key, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFormFile(t *testing.T) {
+	// Create a test multipart form with file
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// Create a file part1
+	part1, _ := writer.CreateFormFile("avatar", "test.jpg")
+	io.WriteString(part1, "fake image data")
+
+	part2, _ := writer.CreateFormFile("file", "test.pdf")
+	io.WriteString(part2, "fake file data")
+
+	writer.Close()
+
+	tests := []struct {
+		name        string
+		req         *Req
+		key         string
+		expectError bool
+		expected    *FormFile
+	}{
+		{
+			name: "Valid image",
+			req: &Req{
+				Headers: map[string]string{
+					"Content-Type": fmt.Sprintf("multipart/form-data; boundary=%s", writer.Boundary()),
+				},
+				Body: body.String(),
+			},
+			key:         "avatar",
+			expectError: false,
+			expected: &FormFile{
+				Filename: "test.jpg",
+				Content:  []byte("fake image data"),
+				Header:   textproto.MIMEHeader{},
+			},
+		},
+		{
+			name: "Valid file",
+			req: &Req{
+				Headers: map[string]string{
+					"Content-Type": fmt.Sprintf("multipart/form-data; boundary=%s", writer.Boundary()),
+				},
+				Body: body.String(),
+			},
+			key:         "file",
+			expectError: false,
+			expected: &FormFile{
+				Filename: "test.pdf",
+				Content:  []byte("fake file data"),
+				Header:   textproto.MIMEHeader{},
+			},
+		},
+		{
+			name: "Non-existent file",
+			req: &Req{
+				Headers: map[string]string{
+					"Content-Type": fmt.Sprintf("multipart/form-data; boundary=%s", writer.Boundary()),
+				},
+				Body: body.String(),
+			},
+			key:         "nonexistent",
+			expectError: true,
+		},
+		{
+			name: "Non-file field",
+			req: &Req{
+				Headers: map[string]string{
+					"Content-Type": fmt.Sprintf("multipart/form-data; boundary=%s", writer.Boundary()),
+				},
+				Body: body.String(),
+			},
+			key:         "username",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			file, err := tt.req.FormFile(tt.key)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+
+			if file.Filename != tt.expected.Filename {
+				t.Errorf("Filename = %v, want %v", file.Filename, tt.expected.Filename)
+			}
+
+			if !bytes.Equal(file.Content, tt.expected.Content) {
+				t.Errorf("Content mismatch")
+			}
+		})
+	}
+}
+
+func TestParseMultipart(t *testing.T) {
+	// Helper to create multipart body
+	createMultipartBody := func(boundary string) string {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		if boundary != "" {
+			writer.SetBoundary(boundary)
+		}
+		writer.WriteField("test", "value")
+		writer.Close()
+		return body.String()
+	}
+
+	tests := []struct {
+		name        string
+		headers     map[string]string
+		body        string
+		expectError bool
+	}{
+		{
+			name: "Valid multipart",
+			headers: map[string]string{
+				"Content-Type": "multipart/form-data; boundary=abc123",
+			},
+			body:        createMultipartBody("abc123"),
+			expectError: false,
+		},
+		{
+			name: "Missing boundary",
+			headers: map[string]string{
+				"Content-Type": "multipart/form-data",
+			},
+			body:        createMultipartBody(""),
+			expectError: true,
+		},
+		{
+			name: "Non-multipart content",
+			headers: map[string]string{
+				"Content-Type": "application/json",
+			},
+			body:        "{}",
+			expectError: true,
+		},
+		{
+			name: "Malformed body",
+			headers: map[string]string{
+				"Content-Type": "multipart/form-data; boundary=abc123",
+			},
+			body:        "invalid multipart data",
+			expectError: true,
+		},
+		// {
+		// 	name: "Case-insensitive header",
+		// 	headers: map[string]string{
+		// 		"CONTENT-TYPE": "multipart/form-data; boundary=abc123",
+		// 	},
+		// 	body:        createMultipartBody("abc123"),
+		// 	expectError: false,
+		// },
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := parseMultipart(tt.headers, []byte(tt.body))
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestFormFile_LargeFile(t *testing.T) {
+	// Create a large file (5MB)
+	largeContent := make([]byte, 5<<20) // 5MB
+	for i := range largeContent {
+		largeContent[i] = byte(i % 256)
+	}
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, _ := writer.CreateFormFile("largefile", "bigdata.bin")
+	part.Write(largeContent)
+	writer.Close()
+
+	req := &Req{
+		Headers: map[string]string{
+			"Content-Type": fmt.Sprintf("multipart/form-data; boundary=%s", writer.Boundary()),
+		},
+		Body: body.String(),
+	}
+
+	file, err := req.FormFile("largefile")
+	if err != nil {
+		t.Fatalf("Failed to parse large file: %v", err)
+	}
+
+	if len(file.Content) != len(largeContent) {
+		t.Errorf("Expected %d bytes, got %d", len(largeContent), len(file.Content))
 	}
 }

@@ -12,8 +12,17 @@ import (
 	"net"
 	"net/http"
 	"net/textproto"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+)
+
+const (
+	// drwxr-xr-x
+	DefaultDirPerm = os.ModeDir | 0755
+	// -rw-------
+	DefaultFilePerm = 0600
 )
 
 type FormFile struct {
@@ -221,6 +230,35 @@ func (req *Req) FormFile(name string) (*FormFile, error) {
 		Content:  content,
 		Header:   fileHeader.Header,
 	}, nil
+}
+
+// Save the multipart form file directly to disk
+// TODO: I think permissions should be a config later
+func (req *Req) Save(formFile *FormFile, destination string) error {
+
+	// Check if formFile is nil first
+	if formFile == nil {
+		return fmt.Errorf("nil FormFile")
+	}
+
+	// Join the file name with the specified destination
+	// TODO: Should be sanitized first
+	fullPath := filepath.Join(destination, formFile.Filename)
+
+	// Create the directory
+	err := os.MkdirAll(destination, DefaultDirPerm)
+	if err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	// Write the file to the destination
+	err = os.WriteFile(fullPath, formFile.Content, DefaultFilePerm)
+	if err != nil {
+		return fmt.Errorf("failed to save file: %w", err)
+	}
+
+	// No errors happened
+	return nil
 }
 
 // Checks if the request is multipart or not and return back the multipart form reader reference

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/muhammadzkralla/zttp"
@@ -252,14 +251,14 @@ func main() {
 			return
 		}
 
-		err = os.WriteFile(part2.Filename, part2.Content, 0644)
+		err = req.Save(part2, "./uploads")
 		if err != nil {
 			log.Println("Failed to save file:", err)
 			res.Status(500).Send("File saving error")
 			return
 		}
 
-		err = os.WriteFile(part4.Filename, part4.Content, 0644)
+		err = req.Save(part4, "./uploads")
 		if err != nil {
 			log.Println("Failed to save file:", err)
 			res.Status(500).Send("File saving error")

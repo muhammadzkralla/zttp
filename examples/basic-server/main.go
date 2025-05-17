@@ -159,7 +159,8 @@ func main() {
 	})
 
 	router.Get("/home", func(req *zttp.Req, res *zttp.Res) {
-		res.Status(200).Send("/api/v1/home get found")
+		response := fmt.Sprintf("The request base url is: %s", req.Host())
+		res.Status(200).Send(response)
 	})
 
 	router.Post("/home/:postId/comment/:commentId", func(req *zttp.Req, res *zttp.Res) {

@@ -2,15 +2,25 @@ package zttp
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"mime"
+	"mime/multipart"
 	"net"
 	"net/http"
+	"net/textproto"
 	"strconv"
 	"strings"
 )
+
+type FormFile struct {
+	Filename string
+	Content  []byte
+	Header   textproto.MIMEHeader
+}
 
 type Req struct {
 	Method  string
@@ -152,6 +162,92 @@ func (req *Req) App() *App {
 // TODO: Should check the `X-Forwarded-Host` HTTP header also
 func (req *Req) Host() string {
 	return req.Header("Host")
+}
+
+// Return the value of the specified part if the request is multipart
+func (req *Req) FormValue(key string) string {
+
+	// Get the multipart reader if the request is multipart
+	form, err := parseMultipart(req.Headers, []byte(req.Body))
+	if err != nil {
+		return ""
+	}
+
+	// Return the first matching part value
+	values := form.Value[key]
+	if len(values) > 0 {
+		return values[0]
+	}
+	return ""
+}
+
+// Return the file of the specified part if the request is multipart
+func (req *Req) FormFile(name string) (*FormFile, error) {
+
+	// Get the multipart reader if the request is multipart
+	form, err := parseMultipart(req.Headers, []byte(req.Body))
+	if err != nil {
+		return nil, err
+	}
+
+	// Return the first matching part value
+	files := form.File[name]
+	if len(files) == 0 {
+		return nil, fmt.Errorf("file %s not found", name)
+	}
+
+	// Open the file to prepare the bytes we will store in the content field of the
+	// FormFile struct
+	fileHeader := files[0]
+	file, err := fileHeader.Open()
+	if err != nil {
+		return nil, err
+	}
+
+	defer file.Close()
+
+	// Copy the bytes
+	content, err := io.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+
+	return &FormFile{
+		Filename: fileHeader.Filename,
+		Content:  content,
+		Header:   fileHeader.Header,
+	}, nil
+}
+
+// Checks if the request is multipart or not and return back the multipart form reader reference
+func parseMultipart(headers map[string]string, body []byte) (*multipart.Form, error) {
+	// Check if it's a multipart request or not
+	contentType := headers["Content-Type"]
+	if contentType == "" {
+		return nil, http.ErrNotMultipart
+	}
+
+	mediaType, params, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return nil, err
+	}
+
+	if !strings.HasPrefix(mediaType, "multipart/") {
+		return nil, fmt.Errorf("not a multipart request")
+	}
+
+	// Extract the boundary that separates between different parts
+	boundary := params["boundary"]
+	if boundary == "" {
+		return nil, fmt.Errorf("no boundary found in Content-Type")
+	}
+
+	// Create a multipart reader from the request body and the parsed boundary
+	reader := multipart.NewReader(bytes.NewReader(body), boundary)
+
+	// 32 MB memory limit + 10 MB added by default
+	// TODO: Should be a configuration later
+	return reader.ReadForm(32 << 20)
 }
 
 // Check if the Cache-Control header contains a valid 'no-cache' directive

@@ -1,6 +1,8 @@
 package zttp
 
 import (
+	"log"
+	"net"
 	"path"
 	"strings"
 )
@@ -94,6 +96,35 @@ func cleanPath(prefix, p string) string {
 		full = full[:len(full)-1]
 	}
 	return full
+}
+
+// Find the matched handler with the passed path from the router and parse params, if exist
+func findHandler(method, path string, socket net.Conn, app *App) (Handler, map[string]string) {
+	for _, router := range app.Routers {
+		var routes []Route
+		switch method {
+		case "GET":
+			routes = router.getRoutes
+		case "DELETE":
+			routes = router.deleteRoutes
+		case "POST":
+			routes = router.postRoutes
+		case "PUT":
+			routes = router.putRoutes
+		case "PATCH":
+			routes = router.patchRoutes
+		default:
+			log.Println("unsupported method:", method)
+			sendResponse(socket, []byte("Method Not Allowed"), 405, "text/plain", nil)
+			return nil, nil
+		}
+
+		if handler, params := matchRoute(path, routes); handler != nil {
+			return handler, params
+		}
+	}
+
+	return nil, nil
 }
 
 // This function searches for the matching handler for the passed request path

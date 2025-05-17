@@ -143,6 +143,17 @@ func (req *Req) Stale() bool {
 	return !req.Fresh()
 }
 
+// Return the reference to the app this request is associated with
+func (req *Req) App() *App {
+	return req.App()
+}
+
+// Return the base URL of the request derived from the `Host` HTTP header
+// TODO: Should check the `X-Forwarded-Host` HTTP header also
+func (req *Req) Host() string {
+	return req.Header("Host")
+}
+
 // Check if the Cache-Control header contains a valid 'no-cache' directive
 func hasNoCacheDirective(cacheControl string) bool {
 	const directive = "no-cache"
@@ -363,33 +374,4 @@ func extractCookies(headers map[string]string) map[string]string {
 	}
 
 	return cookies
-}
-
-// Find the matched handler with the passed path from the router and parse params, if exist
-func findHandler(method, path string, socket net.Conn, app *App) (Handler, map[string]string) {
-	for _, router := range app.Routers {
-		var routes []Route
-		switch method {
-		case "GET":
-			routes = router.getRoutes
-		case "DELETE":
-			routes = router.deleteRoutes
-		case "POST":
-			routes = router.postRoutes
-		case "PUT":
-			routes = router.putRoutes
-		case "PATCH":
-			routes = router.patchRoutes
-		default:
-			log.Println("unsupported method:", method)
-			sendResponse(socket, []byte("Method Not Allowed"), 405, "text/plain", nil)
-			return nil, nil
-		}
-
-		if handler, params := matchRoute(path, routes); handler != nil {
-			return handler, params
-		}
-	}
-
-	return nil, nil
 }

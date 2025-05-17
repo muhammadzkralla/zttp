@@ -173,6 +173,8 @@ func (req *Req) FormValue(key string) string {
 		return ""
 	}
 
+	defer form.RemoveAll()
+
 	// Return the first matching part value
 	values := form.Value[key]
 	if len(values) > 0 {
@@ -189,6 +191,8 @@ func (req *Req) FormFile(name string) (*FormFile, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	defer form.RemoveAll()
 
 	// Return the first matching part value
 	files := form.File[name]
@@ -233,13 +237,14 @@ func parseMultipart(headers map[string]string, body []byte) (*multipart.Form, er
 	}
 
 	if !strings.HasPrefix(mediaType, "multipart/") {
-		return nil, fmt.Errorf("not a multipart request")
+		return nil, http.ErrNotMultipart
 	}
 
 	// Extract the boundary that separates between different parts
 	boundary := params["boundary"]
 	if boundary == "" {
-		return nil, fmt.Errorf("no boundary found in Content-Type")
+		log.Println("no boundary found in Content-Type")
+		return nil, http.ErrNotMultipart
 	}
 
 	// Create a multipart reader from the request body and the parsed boundary

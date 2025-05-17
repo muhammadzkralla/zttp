@@ -7,6 +7,9 @@ import (
 	"io"
 	"mime/multipart"
 	"net/textproto"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -774,5 +777,110 @@ func TestFormFile_LargeFile(t *testing.T) {
 
 	if len(file.Content) != len(largeContent) {
 		t.Errorf("Expected %d bytes, got %d", len(largeContent), len(file.Content))
+	}
+}
+
+func TestSave(t *testing.T) {
+	// Setup test directory
+	testDir := filepath.Join(os.TempDir(), "zttp_save_test")
+
+	// Cleanup after testing
+	defer os.RemoveAll(testDir)
+
+	tests := []struct {
+		name        string
+		formFile    *FormFile
+		destination string
+		setup       func() error
+		expectError bool
+		errorText   string
+	}{
+		{
+			name: "Successful save",
+			formFile: &FormFile{
+				Filename: "test.txt",
+				Content:  []byte("test content"),
+			},
+			destination: testDir,
+			expectError: false,
+		},
+		{
+			name:        "Nil FormFile",
+			formFile:    nil,
+			destination: testDir,
+			expectError: true,
+			errorText:   "nil FormFile",
+		},
+		{
+			name: "Empty filename",
+			formFile: &FormFile{
+				Filename: "",
+				Content:  []byte("content"),
+			},
+			destination: testDir,
+			expectError: true,
+			errorText:   "failed to save file",
+		},
+		{
+			name: "Path traversal attempt",
+			formFile: &FormFile{
+				Filename: "./malicious.txt",
+				Content:  []byte("bad content"),
+			},
+			destination: testDir,
+			// Should sanitize successfully
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup test environment and start fresh
+			os.RemoveAll(testDir)
+			os.MkdirAll(testDir, DefaultDirPerm)
+
+			if tt.setup != nil {
+				if err := tt.setup(); err != nil {
+					t.Fatalf("Setup failed: %v", err)
+				}
+			}
+
+			req := &Req{}
+			err := req.Save(tt.formFile, tt.destination)
+
+			if tt.expectError {
+				if err == nil {
+					t.Fatal("Expected error but got none")
+				}
+				if tt.errorText != "" && !strings.Contains(err.Error(), tt.errorText) {
+					t.Errorf("Error %q should contain %q", err.Error(), tt.errorText)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+
+				// Verify file was saved correctly
+				expectedFile := filepath.Join(tt.destination, tt.formFile.Filename)
+				info, err := os.Stat(expectedFile)
+				if err != nil {
+					t.Fatalf("Saved file not found: %v", err)
+				}
+
+				// Verify permissions
+				if info.Mode().Perm() != DefaultFilePerm {
+					t.Errorf("File permissions %v != expected %v", info.Mode().Perm(), DefaultFilePerm)
+				}
+
+				// Verify content
+				content, err := os.ReadFile(expectedFile)
+				if err != nil {
+					t.Fatalf("Failed to read saved file: %v", err)
+				}
+				if !bytes.Equal(content, tt.formFile.Content) {
+					t.Errorf("File content mismatch")
+				}
+			}
+		})
 	}
 }

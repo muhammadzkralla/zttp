@@ -2,15 +2,34 @@ package zttp
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"mime"
+	"mime/multipart"
 	"net"
 	"net/http"
+	"net/textproto"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
+
+const (
+	// drwxr-xr-x
+	DefaultDirPerm = os.ModeDir | 0755
+	// -rw-------
+	DefaultFilePerm = 0600
+)
+
+type FormFile struct {
+	Filename string
+	Content  []byte
+	Header   textproto.MIMEHeader
+}
 
 type Req struct {
 	Method  string
@@ -141,6 +160,137 @@ func (req *Req) Fresh() bool {
 // If the request is not fresh, then it's stale
 func (req *Req) Stale() bool {
 	return !req.Fresh()
+}
+
+// Return the reference to the app this request is associated with
+func (req *Req) App() *App {
+	return req.App()
+}
+
+// Return the base URL of the request derived from the `Host` HTTP header
+// TODO: Should check the `X-Forwarded-Host` HTTP header also
+func (req *Req) Host() string {
+	return req.Header("Host")
+}
+
+// Return the value of the specified part if the request is multipart
+func (req *Req) FormValue(key string) string {
+
+	// Get the multipart reader if the request is multipart
+	form, err := parseMultipart(req.Headers, []byte(req.Body))
+	if err != nil {
+		return ""
+	}
+
+	defer form.RemoveAll()
+
+	// Return the first matching part value
+	values := form.Value[key]
+	if len(values) > 0 {
+		return values[0]
+	}
+	return ""
+}
+
+// Return the file of the specified part if the request is multipart
+func (req *Req) FormFile(name string) (*FormFile, error) {
+
+	// Get the multipart reader if the request is multipart
+	form, err := parseMultipart(req.Headers, []byte(req.Body))
+	if err != nil {
+		return nil, err
+	}
+
+	defer form.RemoveAll()
+
+	// Return the first matching part value
+	files := form.File[name]
+	if len(files) == 0 {
+		return nil, fmt.Errorf("file %s not found", name)
+	}
+
+	// Open the file to prepare the bytes we will store in the content field of the
+	// FormFile struct
+	fileHeader := files[0]
+	file, err := fileHeader.Open()
+	if err != nil {
+		return nil, err
+	}
+
+	defer file.Close()
+
+	// Copy the bytes
+	content, err := io.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+
+	return &FormFile{
+		Filename: fileHeader.Filename,
+		Content:  content,
+		Header:   fileHeader.Header,
+	}, nil
+}
+
+// Save the multipart form file directly to disk
+// TODO: I think permissions should be a config later
+func (req *Req) Save(formFile *FormFile, destination string) error {
+
+	// Check if formFile is nil first
+	if formFile == nil {
+		return fmt.Errorf("nil FormFile")
+	}
+
+	// Join the file name with the specified destination
+	// TODO: Should be sanitized first
+	fullPath := filepath.Join(destination, formFile.Filename)
+
+	// Create the directory
+	err := os.MkdirAll(destination, DefaultDirPerm)
+	if err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	// Write the file to the destination
+	err = os.WriteFile(fullPath, formFile.Content, DefaultFilePerm)
+	if err != nil {
+		return fmt.Errorf("failed to save file: %w", err)
+	}
+
+	// No errors happened
+	return nil
+}
+
+// Checks if the request is multipart or not and return back the multipart form reader reference
+func parseMultipart(headers map[string]string, body []byte) (*multipart.Form, error) {
+	// Check if it's a multipart request or not
+	contentType := headers["Content-Type"]
+	if contentType == "" {
+		return nil, http.ErrNotMultipart
+	}
+
+	mediaType, params, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return nil, err
+	}
+
+	if !strings.HasPrefix(mediaType, "multipart/") {
+		return nil, http.ErrNotMultipart
+	}
+
+	// Extract the boundary that separates between different parts
+	boundary := params["boundary"]
+	if boundary == "" {
+		log.Println("no boundary found in Content-Type")
+		return nil, http.ErrNotMultipart
+	}
+
+	// Create a multipart reader from the request body and the parsed boundary
+	reader := multipart.NewReader(bytes.NewReader(body), boundary)
+
+	// 32 MB memory limit + 10 MB added by default
+	// TODO: Should be a configuration later
+	return reader.ReadForm(32 << 20)
 }
 
 // Check if the Cache-Control header contains a valid 'no-cache' directive
@@ -363,33 +513,4 @@ func extractCookies(headers map[string]string) map[string]string {
 	}
 
 	return cookies
-}
-
-// Find the matched handler with the passed path from the router and parse params, if exist
-func findHandler(method, path string, socket net.Conn, app *App) (Handler, map[string]string) {
-	for _, router := range app.Routers {
-		var routes []Route
-		switch method {
-		case "GET":
-			routes = router.getRoutes
-		case "DELETE":
-			routes = router.deleteRoutes
-		case "POST":
-			routes = router.postRoutes
-		case "PUT":
-			routes = router.putRoutes
-		case "PATCH":
-			routes = router.patchRoutes
-		default:
-			log.Println("unsupported method:", method)
-			sendResponse(socket, []byte("Method Not Allowed"), 405, "text/plain", nil)
-			return nil, nil
-		}
-
-		if handler, params := matchRoute(path, routes); handler != nil {
-			return handler, params
-		}
-	}
-
-	return nil, nil
 }

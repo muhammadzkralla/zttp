@@ -16,6 +16,11 @@ type App struct {
 	PrettyPrintJSON bool
 }
 
+type Ctx struct {
+	Req *Req
+	Res *Res
+}
+
 // New App constructor
 func NewApp() *App {
 	defaultRouter := &Router{

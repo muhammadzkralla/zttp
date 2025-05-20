@@ -70,3 +70,139 @@ You will get this printed in your terminal:
 ```bash
 Hello from ZTTP!
 ```
+
+## Features
+
+### Core Functionality
+
+- Raw TCP HTTP/1.1 server with concurrent connection handling
+- Front Controller Design Pattern implementation
+- Zero dependency (pure GO standard library)
+
+### Routing
+
+```go
+app.Get("/path", handler)
+app.Post("/path", handler)
+app.Put("/path", handler)
+app.Patch("/path", handler)
+app.Delete("/path", handler)
+```
+
+### Path Parameters
+
+```go
+// Route: "/post/:postId/comment/:commentId"
+params := req.Params                // All params (map[string]string)
+postId := req.Param("postId")       // postId param
+commentId := req.Param("commentId")  // commentId param
+```
+
+### Path Queries
+
+```go
+// URL: /user?name=John&age=30
+queries := req.Queries              // All queries (map[string]string)
+name := req.Query("name")           // name query
+age := req.Query("age")           // age query
+```
+
+### Request Handling
+
+- Body parsing: `req.Body` (raw string)
+- JSON parsing:
+```go
+// Parse request body into JSON and store the result in user variable
+var user User
+err := req.ParseJson(&user)
+```
+- Form data & file uploads:
+```go
+value := req.FormValue("field")     // Get `field` part from request
+file, err := req.FormFile("file")   // Get `file` part from request
+err = req.Save(file, "./uploads")   // Save file to disk in `./uploads` directory
+```
+
+### Response Handling
+
+```go
+res.Status(201).Send("text")        // Text response
+res.Status(200).Json(data)          // JSON response
+res.Status(304).End()               // Empty response
+```
+
+### Headers
+
+```go
+req.Headers                         // All request headers (map[string]string)
+res.Headers                         // All response headers (map[string][]string)
+req.Header("Header-Name")           // Get request header
+res.Header("Key", "Value")         // Set response header
+```
+
+### Cookies
+
+```go
+req.Cookies                     // All request cookies (map[string]string)
+res.SetCookie(zttp.Cookie{      // Set response cookie
+    Name: "session",
+    Value: "token",
+    Expires: time.Now().Add(24*time.Hour)
+})
+```
+
+### Static File Serving
+
+```go
+res.Static("index.html", "./public")         // Serve HTML file
+res.Static("image.png", "./assets")         // Serve image file
+```
+
+### Middleware
+
+```go
+// Global middleware
+app.Use(func(req *zttp.Req, res *zttp.Res, next func()) {
+    // Pre-processing
+    next()
+    // Post-processing
+})
+
+// Route-specific middleware
+app.Use("/path", middlewareHandler)
+```
+
+### Sub-Routers
+
+```go
+router := app.NewRouter("/api/v1")
+router.Get("/endpoint", handler)    // Handles /api/v1/endpoint
+```
+
+### Cache Control
+
+```go
+res.Header("ETag", "version1")
+res.Header("Last-Modified", timestamp)
+
+// If the request is still fresh in the client's cache
+if req.Fresh() {
+    // Handle cached responses, return 304 Not Changed response
+    res.Status(304).End()
+}
+```
+
+### Error Handling
+
+- Automatic panic recovery
+- Manual error responses:
+```go
+res.Status(400).Send("Bad request")
+```
+
+### HTTPS Support via TLS
+
+```go
+// Start secure server with TLS
+app.StartTLS(443, "cert.pem", "key.pem")
+```

@@ -98,7 +98,7 @@ postId := req.Param("postId")       // postId param
 commentId := req.Param("commentId")  // commentId param
 ```
 
-### Path Queries
+### Queries Parameters
 
 ```go
 // URL: /user?name=John&age=30
@@ -206,3 +206,5 @@ res.Status(400).Send("Bad request")
 // Start secure server with TLS
 app.StartTLS(443, "cert.pem", "key.pem")
 ```
+
+For More details, visit the [examples](https://github.com/muhammadzkralla/zttp/tree/master/examples/) section.

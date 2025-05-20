@@ -1,0 +1,6 @@
+curl -i -X GET "localhost:8080/static/index.html"
+echo "\n"
+curl -i -X GET "localhost:8080/static/home.html"
+echo "\n"
+curl -O "localhost:8080/static/download.png"
+echo "\n"

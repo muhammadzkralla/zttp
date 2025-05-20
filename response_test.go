@@ -121,7 +121,7 @@ func TestStaticResponseServing(t *testing.T) {
 		Headers: make(map[string][]string),
 	}
 
-	res.Static("index.html", "./examples/basic-server/public")
+	res.Static("index.html", "./examples/static-file-serving/public/")
 
 	output := string(conn.outBuf)
 
@@ -138,7 +138,7 @@ func TestStaticResponseServing(t *testing.T) {
 		Headers: make(map[string][]string),
 	}
 
-	res.Static("home.html", "./examples/basic-server/public")
+	res.Static("home.html", "./examples/static-file-serving/public/")
 
 	output = string(conn.outBuf)
 
@@ -155,7 +155,7 @@ func TestStaticResponseServing(t *testing.T) {
 		Headers: make(map[string][]string),
 	}
 
-	res.Static("download.png", "./examples/basic-server/public")
+	res.Static("download.png", "./examples/static-file-serving/public/")
 
 	output = string(conn.outBuf)
 

@@ -272,6 +272,7 @@ func (req *Req) Accepts(types ...string) string {
 	acceptHeader := req.Header("Accept")
 
 	if acceptHeader == "" || len(types) == 0 {
+		//TODO: Align with RFC standards
 		return ""
 	}
 

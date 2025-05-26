@@ -884,3 +884,169 @@ func TestSave(t *testing.T) {
 		})
 	}
 }
+
+func TestAccepts(t *testing.T) {
+	tests := []struct {
+		name         string
+		acceptHeader string
+		offeredTypes []string
+		expected     string
+	}{
+		// Exact matches
+		{
+			name:         "Exact match - JSON",
+			acceptHeader: "application/json",
+			offeredTypes: []string{"application/json", "text/html"},
+			expected:     "application/json",
+		},
+		{
+			name:         "Exact match - HTML",
+			acceptHeader: "text/html",
+			offeredTypes: []string{"application/json", "text/html"},
+			expected:     "text/html",
+		},
+
+		// Quality values
+		{
+			name:         "Quality priority - prefers XML",
+			acceptHeader: "text/html;q=0.8, application/xml;q=0.9",
+			offeredTypes: []string{"text/html", "application/xml"},
+			expected:     "application/xml",
+		},
+		{
+			name:         "Quality fallback - lower q-value",
+			acceptHeader: "text/csv;q=0.1, text/html;q=0.5",
+			offeredTypes: []string{"text/csv", "text/html"},
+			expected:     "text/html",
+		},
+
+		// Wildcards
+		{
+			name:         "Type wildcard matches any subtype",
+			acceptHeader: "image/*",
+			offeredTypes: []string{"image/png", "text/html"},
+			expected:     "image/png",
+		},
+		{
+			name:         "Catch-all wildcard matches first offered",
+			acceptHeader: "*/*",
+			offeredTypes: []string{"application/json", "text/html"},
+			expected:     "application/json",
+		},
+
+		// No match cases
+		{
+			name:         "No overlap",
+			acceptHeader: "application/xml",
+			offeredTypes: []string{"text/html", "application/json"},
+			expected:     "",
+		},
+		{
+			name:         "Empty Accept header",
+			acceptHeader: "",
+			offeredTypes: []string{"text/html"},
+			expected:     "",
+		},
+
+		// Edge cases
+		{
+			name:         "Malformed q-value defaults to 1.0",
+			acceptHeader: "text/html;q=invalid, application/json;q=0.9",
+			offeredTypes: []string{"text/html", "application/json"},
+			expected:     "text/html",
+		},
+		{
+			name:         "Multiple wildcards",
+			acceptHeader: "text/*, image/*",
+			offeredTypes: []string{"image/png", "text/css"},
+			// First in client's list with match
+			expected: "text/css",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := &Req{
+				Headers: map[string]string{
+					"Accept": tt.acceptHeader,
+				},
+			}
+
+			result := req.Accepts(tt.offeredTypes...)
+
+			if result != tt.expected {
+				t.Errorf("Expected '%s', got '%s' (header: %s, offered: %v)",
+					tt.expected, result, tt.acceptHeader, tt.offeredTypes)
+			}
+		})
+	}
+}
+
+func TestParseAcceptHeader(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected []AcceptType
+	}{
+		{
+			input: "text/html, application/xml;q=0.9",
+			expected: []AcceptType{
+				{"text/html", 1.0},
+				{"application/xml", 0.9},
+			},
+		},
+		{
+			input: "text/*;q=0.5, */*;q=0.1",
+			expected: []AcceptType{
+				{"text/*", 0.5},
+				{"*/*", 0.1},
+			},
+		},
+		{
+			// Should default to q=1.0
+			input: "text/plain;q=invalid",
+			expected: []AcceptType{
+				{"text/plain", 1.0},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := parseAcceptHeader(tt.input)
+			if len(result) != len(tt.expected) {
+				t.Fatalf("Expected %d types, got %d", len(tt.expected), len(result))
+			}
+
+			for i := range result {
+				if result[i].mimeType != tt.expected[i].mimeType || result[i].q != tt.expected[i].q {
+					t.Errorf("Position %d: Expected %v, got %v",
+						i, tt.expected[i], result[i])
+				}
+			}
+		})
+	}
+}
+
+func TestMatches(t *testing.T) {
+	tests := []struct {
+		clientType  string
+		offeredType string
+		expected    bool
+	}{
+		{"text/html", "text/html", true},
+		{"image/*", "image/png", true},
+		{"*/*", "application/json", true},
+		{"text/*", "image/png", false},
+		{"application/json", "text/html", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.clientType+"_"+tt.offeredType, func(t *testing.T) {
+			result := matches(tt.clientType, tt.offeredType)
+			if result != tt.expected {
+				t.Errorf("Expected %t for client=%s, offered=%s",
+					tt.expected, tt.clientType, tt.offeredType)
+			}
+		})
+	}
+}

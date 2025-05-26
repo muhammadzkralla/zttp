@@ -14,6 +14,7 @@ import (
 	"net/textproto"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -24,6 +25,11 @@ const (
 	// -rw-------
 	DefaultFilePerm = 0600
 )
+
+type AcceptType struct {
+	mimeType string
+	q        float32
+}
 
 type FormFile struct {
 	Filename string
@@ -259,6 +265,74 @@ func (req *Req) Save(formFile *FormFile, destination string) error {
 
 	// No errors happened
 	return nil
+}
+
+// Checks if the specified types are accepted from the HTTP client
+func (req *Req) Accepts(types ...string) string {
+	acceptHeader := req.Header("Accept")
+
+	if acceptHeader == "" || len(types) == 0 {
+		//TODO: Align with RFC standards
+		return ""
+	}
+
+	clientTypes := parseAcceptHeader(acceptHeader)
+
+	for _, clientType := range clientTypes {
+		for _, offered := range types {
+			if matches(clientType.mimeType, offered) {
+				return offered
+			}
+		}
+	}
+
+	return ""
+}
+
+// Parse the `Accepts` HTTP client header and return a list of accepted types with their quality factors
+func parseAcceptHeader(header string) []AcceptType {
+	var types []AcceptType
+	parts := strings.Split(header, ",")
+
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		segments := strings.Split(trimmed, ";")
+
+		mime := segments[0]
+		// Default q-value
+		q := float32(1.0)
+
+		// Parse quality factor if present
+		if len(segments) > 1 && strings.HasPrefix(segments[1], "q=") {
+			fmt.Sscanf(segments[1][2:], "%f", &q)
+		}
+
+		types = append(types, AcceptType{mimeType: mime, q: q})
+	}
+
+	// Sort the accepted types according to the quality factor from highest to lowest
+	sort.Slice(types, func(i, j int) bool {
+		return types[i].q > types[j].q
+	})
+
+	return types
+}
+
+// Checks for matching between the types of the client header and the specified type
+// TODO: Support case-insensitivity later
+func matches(clientType, offeredType string) bool {
+	// Exact match
+	if clientType == offeredType {
+		return true
+	}
+
+	// Wildcard support
+	if strings.HasSuffix(clientType, "/*") && clientType != "*/*" {
+		return strings.Split(clientType, "/")[0] == strings.Split(offeredType, "/")[0]
+	}
+
+	// Catch-all wildcard
+	return clientType == "*/*"
 }
 
 // Checks if the request is multipart or not and return back the multipart form reader reference

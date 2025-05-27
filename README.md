@@ -177,6 +177,7 @@ app.Use("/path", middlewareHandler)
 ```go
 router := app.NewRouter("/api/v1")
 router.Get("/endpoint", handler)    // Handles /api/v1/endpoint
+router.Use("/path", middlewareHandler) // Router-specific middleware
 ```
 
 ### Cache Control

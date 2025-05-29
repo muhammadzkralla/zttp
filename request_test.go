@@ -1050,3 +1050,107 @@ func TestMatches(t *testing.T) {
 		})
 	}
 }
+
+func TestAcceptsCharsets(t *testing.T) {
+	tests := []struct {
+		name     string
+		header   string
+		offered  []string
+		expected string
+	}{
+		{
+			name:     "Exact match - UTF-8",
+			header:   "utf-8",
+			offered:  []string{"utf-8", "iso-8859-1"},
+			expected: "utf-8",
+		},
+		{
+			name:     "Case insensitive match",
+			header:   "UTF-8",
+			offered:  []string{"utf-8"},
+			expected: "utf-8",
+		},
+		{
+			name:     "Quality priority",
+			header:   "iso-8859-1;q=0.9, utf-8;q=0.8",
+			offered:  []string{"utf-8", "iso-8859-1"},
+			expected: "iso-8859-1",
+		},
+		{
+			name:     "Wildcard acceptance",
+			header:   "*",
+			offered:  []string{"utf-8", "iso-8859-1"},
+			expected: "utf-8",
+		},
+		{
+			name:     "No match",
+			header:   "utf-16",
+			offered:  []string{"utf-8", "iso-8859-1"},
+			expected: "",
+		},
+		{
+			name:     "Empty header",
+			header:   "",
+			offered:  []string{"utf-8"},
+			expected: "",
+		},
+		{
+			name:     "Zero q-value ignored",
+			header:   "utf-8;q=0, iso-8859-1;q=0.5",
+			offered:  []string{"utf-8", "iso-8859-1"},
+			expected: "iso-8859-1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := &Req{
+				Headers: map[string]string{
+					"Accept-Charset": tt.header,
+				},
+			}
+			result := req.AcceptsCharsets(tt.offered...)
+			if result != tt.expected {
+				t.Errorf("Expected '%s', got '%s' (header: %s, offered: %v)",
+					tt.expected, result, tt.header, tt.offered)
+			}
+		})
+	}
+}
+
+func TestParseAcceptCharsetHeader(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected []AcceptCharset
+	}{
+		{
+			input: "utf-8, iso-8859-1;q=0.8",
+			expected: []AcceptCharset{
+				{"utf-8", 1.0},
+				{"iso-8859-1", 0.8},
+			},
+		},
+		{
+			input: "*;q=0.5, utf-16;q=0.9",
+			expected: []AcceptCharset{
+				{"utf-16", 0.9},
+				{"*", 0.5},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := parseAcceptCharsetHeader(tt.input)
+			if len(result) != len(tt.expected) {
+				t.Fatalf("Expected %d charsets, got %d", len(tt.expected), len(result))
+			}
+			for i := range result {
+				if result[i].charset != tt.expected[i].charset || result[i].q != tt.expected[i].q {
+					t.Errorf("Position %d: Expected %v, got %v",
+						i, tt.expected[i], result[i])
+				}
+			}
+		})
+	}
+}

@@ -31,6 +31,11 @@ type AcceptType struct {
 	q        float32
 }
 
+type AcceptCharset struct {
+	charset string
+	q       float32
+}
+
 type FormFile struct {
 	Filename string
 	Content  []byte
@@ -289,6 +294,34 @@ func (req *Req) Accepts(types ...string) string {
 	return ""
 }
 
+// Checks if the specified types are accepted from the HTTP client
+func (req *Req) AcceptsCharsets(offered ...string) string {
+	charsetHeader := req.Header("Accept-Charset")
+	if charsetHeader == "" {
+		//TODO: Align with RFC standards
+		return ""
+	}
+
+	clientCharsets := parseAcceptCharsetHeader(charsetHeader)
+
+	// Handle wildcard
+	for _, cc := range clientCharsets {
+		if cc.charset == "*" && cc.q > 0 {
+			return offered[0]
+		}
+	}
+
+	for _, cc := range clientCharsets {
+		for _, charset := range offered {
+			if strings.EqualFold(cc.charset, charset) && cc.q > 0 {
+				return charset
+			}
+		}
+	}
+
+	return ""
+}
+
 // Parse the `Accepts` HTTP client header and return a list of accepted types with their quality factors
 func parseAcceptHeader(header string) []AcceptType {
 	var types []AcceptType
@@ -316,6 +349,32 @@ func parseAcceptHeader(header string) []AcceptType {
 	})
 
 	return types
+}
+
+func parseAcceptCharsetHeader(header string) []AcceptCharset {
+	var charsets []AcceptCharset
+	parts := strings.Split(header, ",")
+
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		segments := strings.Split(trimmed, ";")
+
+		charset := strings.ToLower(segments[0])
+		q := float32(1.0)
+
+		if len(segments) > 1 && strings.HasPrefix(segments[1], "q=") {
+			fmt.Sscanf(segments[1][2:], "%f", &q)
+		}
+
+		charsets = append(charsets, AcceptCharset{charset, q})
+	}
+
+	// Sort by q-value (highest first)
+	sort.Slice(charsets, func(i, j int) bool {
+		return charsets[i].q > charsets[j].q
+	})
+
+	return charsets
 }
 
 // Checks for matching between the types of the client header and the specified type

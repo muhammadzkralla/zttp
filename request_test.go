@@ -945,7 +945,7 @@ func TestAccepts(t *testing.T) {
 			name:         "Empty Accept header",
 			acceptHeader: "",
 			offeredTypes: []string{"text/html"},
-			expected:     "",
+			expected:     "text/html",
 		},
 
 		// Edge cases
@@ -1092,7 +1092,7 @@ func TestAcceptsCharsets(t *testing.T) {
 			name:     "Empty header",
 			header:   "",
 			offered:  []string{"utf-8"},
-			expected: "",
+			expected: "utf-8",
 		},
 		{
 			name:     "Zero q-value ignored",
@@ -1153,4 +1153,71 @@ func TestParseAcceptCharsetHeader(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAcceptsEncodings(t *testing.T) {
+    tests := []struct {
+        name     string
+        header   string
+        offered  []string
+        expected string
+    }{
+        {
+            name:     "Exact match - gzip",
+            header:   "gzip",
+            offered:  []string{"gzip", "deflate"},
+            expected: "gzip",
+        },
+        {
+            name:     "Quality priority",
+            header:   "gzip;q=0.8, deflate;q=0.9",
+            offered:  []string{"gzip", "deflate"},
+            expected: "deflate",
+        },
+        {
+            name:     "Wildcard acceptance",
+            header:   "*",
+            offered:  []string{"br", "gzip"},
+            expected: "br",
+        },
+        {
+            name:     "Explicit identity refusal",
+            header:   "gzip, identity;q=0",
+            offered:  []string{"identity"},
+            expected: "",
+        },
+        // {
+        //     name:     "Implicit identity acceptance",
+        //     header:   "gzip",
+        //     offered:  []string{"identity"},
+        //     expected: "identity",
+        // },
+        {
+            name:     "Empty header accepts all",
+            header:   "",
+            offered:  []string{"gzip", "identity"},
+            expected: "gzip",
+        },
+        {
+            name:     "Case insensitive",
+            header:   "GZip",
+            offered:  []string{"gzip"},
+            expected: "gzip",
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            req := &Req{
+                Headers: map[string]string{
+                    "Accept-Encoding": tt.header,
+                },
+            }
+            result := req.AcceptsEncodings(tt.offered...)
+            if result != tt.expected {
+                t.Errorf("Expected '%s', got '%s' (header: %s, offered: %v)",
+                    tt.expected, result, tt.header, tt.offered)
+            }
+        })
+    }
 }

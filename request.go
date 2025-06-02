@@ -36,6 +36,11 @@ type AcceptCharset struct {
 	q       float32
 }
 
+type AcceptsEncoding struct {
+	encoding string
+	q        float32
+}
+
 type FormFile struct {
 	Filename string
 	Content  []byte
@@ -278,7 +283,7 @@ func (req *Req) Accepts(types ...string) string {
 
 	if acceptHeader == "" || len(types) == 0 {
 		//TODO: Align with RFC standards
-		return ""
+		return types[0]
 	}
 
 	clientTypes := parseAcceptHeader(acceptHeader)
@@ -299,7 +304,7 @@ func (req *Req) AcceptsCharsets(offered ...string) string {
 	charsetHeader := req.Header("Accept-Charset")
 	if charsetHeader == "" {
 		//TODO: Align with RFC standards
-		return ""
+		return offered[0]
 	}
 
 	clientCharsets := parseAcceptCharsetHeader(charsetHeader)
@@ -316,6 +321,43 @@ func (req *Req) AcceptsCharsets(offered ...string) string {
 			if strings.EqualFold(cc.charset, charset) && cc.q > 0 {
 				return charset
 			}
+		}
+	}
+
+	return ""
+}
+
+func (req *Req) AcceptsEncodings(offered ...string) string {
+	encodingsHeader := req.Header("Accept-Encoding")
+	if encodingsHeader == "" {
+		//TODO: Align with RFC standards
+		return offered[0]
+	}
+
+	clientEncodings := parseAcceptEncodingHeader(encodingsHeader)
+
+	// Special cases (RFC 7231)
+	for _, enc := range clientEncodings {
+		// "identity" is always acceptable unless explicitly forbidden with q=0
+		if enc.encoding == "identity" && enc.q == 0 {
+			// Client explicitly refuses identity
+			return ""
+		}
+	}
+
+	for _, enc := range clientEncodings {
+		for _, offeredEnc := range offered {
+			fmt.Printf("comparing %s with %s", enc.encoding, offeredEnc)
+			if strings.EqualFold(enc.encoding, offeredEnc) && enc.q > 0 {
+				return offeredEnc
+			}
+		}
+	}
+
+	// Check for wildcard
+	for _, enc := range clientEncodings {
+		if enc.encoding == "*" && enc.q > 0 {
+			return offered[0]
 		}
 	}
 
@@ -375,6 +417,32 @@ func parseAcceptCharsetHeader(header string) []AcceptCharset {
 	})
 
 	return charsets
+}
+
+func parseAcceptEncodingHeader(header string) []AcceptsEncoding {
+	var encodings []AcceptsEncoding
+	parts := strings.Split(header, ",")
+
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		segments := strings.Split(trimmed, ";")
+
+		charset := strings.ToLower(segments[0])
+		q := float32(1.0)
+
+		if len(segments) > 1 && strings.HasPrefix(segments[1], "q=") {
+			fmt.Sscanf(segments[1][2:], "%f", &q)
+		}
+
+		encodings = append(encodings, AcceptsEncoding{charset, q})
+	}
+
+	// Sort by q-value (highest first)
+	sort.Slice(encodings, func(i, j int) bool {
+		return encodings[i].q > encodings[j].q
+	})
+
+	return encodings
 }
 
 // Checks for matching between the types of the client header and the specified type

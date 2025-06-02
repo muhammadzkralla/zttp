@@ -347,7 +347,6 @@ func (req *Req) AcceptsEncodings(offered ...string) string {
 
 	for _, enc := range clientEncodings {
 		for _, offeredEnc := range offered {
-			fmt.Printf("comparing %s with %s", enc.encoding, offeredEnc)
 			if strings.EqualFold(enc.encoding, offeredEnc) && enc.q > 0 {
 				return offeredEnc
 			}

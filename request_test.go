@@ -1156,68 +1156,105 @@ func TestParseAcceptCharsetHeader(t *testing.T) {
 }
 
 func TestAcceptsEncodings(t *testing.T) {
-    tests := []struct {
-        name     string
-        header   string
-        offered  []string
-        expected string
-    }{
-        {
-            name:     "Exact match - gzip",
-            header:   "gzip",
-            offered:  []string{"gzip", "deflate"},
-            expected: "gzip",
-        },
-        {
-            name:     "Quality priority",
-            header:   "gzip;q=0.8, deflate;q=0.9",
-            offered:  []string{"gzip", "deflate"},
-            expected: "deflate",
-        },
-        {
-            name:     "Wildcard acceptance",
-            header:   "*",
-            offered:  []string{"br", "gzip"},
-            expected: "br",
-        },
-        {
-            name:     "Explicit identity refusal",
-            header:   "gzip, identity;q=0",
-            offered:  []string{"identity"},
-            expected: "",
-        },
-        // {
-        //     name:     "Implicit identity acceptance",
-        //     header:   "gzip",
-        //     offered:  []string{"identity"},
-        //     expected: "identity",
-        // },
-        {
-            name:     "Empty header accepts all",
-            header:   "",
-            offered:  []string{"gzip", "identity"},
-            expected: "gzip",
-        },
-        {
-            name:     "Case insensitive",
-            header:   "GZip",
-            offered:  []string{"gzip"},
-            expected: "gzip",
-        },
-    }
+	tests := []struct {
+		name     string
+		header   string
+		offered  []string
+		expected string
+	}{
+		{
+			name:     "Exact match - gzip",
+			header:   "gzip",
+			offered:  []string{"gzip", "deflate"},
+			expected: "gzip",
+		},
+		{
+			name:     "Quality priority",
+			header:   "gzip;q=0.8, deflate;q=0.9",
+			offered:  []string{"gzip", "deflate"},
+			expected: "deflate",
+		},
+		{
+			name:     "Wildcard acceptance",
+			header:   "*",
+			offered:  []string{"br", "gzip"},
+			expected: "br",
+		},
+		{
+			name:     "Explicit identity refusal",
+			header:   "gzip, identity;q=0",
+			offered:  []string{"identity"},
+			expected: "",
+		},
+		// {
+		//     name:     "Implicit identity acceptance",
+		//     header:   "gzip",
+		//     offered:  []string{"identity"},
+		//     expected: "identity",
+		// },
+		{
+			name:     "Empty header accepts all",
+			header:   "",
+			offered:  []string{"gzip", "identity"},
+			expected: "gzip",
+		},
+		{
+			name:     "Case insensitive",
+			header:   "GZip",
+			offered:  []string{"gzip"},
+			expected: "gzip",
+		},
+	}
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            req := &Req{
-                Headers: map[string]string{
-                    "Accept-Encoding": tt.header,
-                },
-            }
-            result := req.AcceptsEncodings(tt.offered...)
-            if result != tt.expected {
-                t.Errorf("Expected '%s', got '%s' (header: %s, offered: %v)",
-                    tt.expected, result, tt.header, tt.offered)
-            }
-        })
-    }
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := &Req{
+				Headers: map[string]string{
+					"Accept-Encoding": tt.header,
+				},
+			}
+			result := req.AcceptsEncodings(tt.offered...)
+			if result != tt.expected {
+				t.Errorf("Expected '%s', got '%s' (header: %s, offered: %v)",
+					tt.expected, result, tt.header, tt.offered)
+			}
+		})
+	}
+}
+
+func TestParseAcceptEncodingHeader(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected []AcceptsEncoding
+	}{
+		{
+			input: "gzip, deflate;q=0.5",
+			expected: []AcceptsEncoding{
+				{"gzip", 1.0},
+				{"deflate", 0.5},
+			},
+		},
+		{
+			input: "br;q=0.8, *;q=0.1",
+			expected: []AcceptsEncoding{
+				{"br", 0.8},
+				{"*", 0.1},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := parseAcceptEncodingHeader(tt.input)
+			if len(result) != len(tt.expected) {
+				t.Fatalf("Expected %d encodings, got %d", len(tt.expected), len(result))
+			}
+			for i := range result {
+				if result[i].encoding != tt.expected[i].encoding || result[i].q != tt.expected[i].q {
+					t.Errorf("Position %d: Expected %v, got %v",
+						i, tt.expected[i], result[i])
+				}
+			}
+		})
+	}
 }

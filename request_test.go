@@ -985,18 +985,18 @@ func TestAccepts(t *testing.T) {
 func TestParseAcceptHeader(t *testing.T) {
 	tests := []struct {
 		input    string
-		expected []AcceptType
+		expected []AcceptPart
 	}{
 		{
 			input: "text/html, application/xml;q=0.9",
-			expected: []AcceptType{
+			expected: []AcceptPart{
 				{"text/html", 1.0},
 				{"application/xml", 0.9},
 			},
 		},
 		{
 			input: "text/*;q=0.5, */*;q=0.1",
-			expected: []AcceptType{
+			expected: []AcceptPart{
 				{"text/*", 0.5},
 				{"*/*", 0.1},
 			},
@@ -1004,7 +1004,7 @@ func TestParseAcceptHeader(t *testing.T) {
 		{
 			// Should default to q=1.0
 			input: "text/plain;q=invalid",
-			expected: []AcceptType{
+			expected: []AcceptPart{
 				{"text/plain", 1.0},
 			},
 		},
@@ -1018,7 +1018,7 @@ func TestParseAcceptHeader(t *testing.T) {
 			}
 
 			for i := range result {
-				if result[i].mimeType != tt.expected[i].mimeType || result[i].q != tt.expected[i].q {
+				if result[i].part != tt.expected[i].part || result[i].q != tt.expected[i].q {
 					t.Errorf("Position %d: Expected %v, got %v",
 						i, tt.expected[i], result[i])
 				}
@@ -1121,18 +1121,18 @@ func TestAcceptsCharsets(t *testing.T) {
 func TestParseAcceptCharsetHeader(t *testing.T) {
 	tests := []struct {
 		input    string
-		expected []AcceptCharset
+		expected []AcceptPart
 	}{
 		{
 			input: "utf-8, iso-8859-1;q=0.8",
-			expected: []AcceptCharset{
+			expected: []AcceptPart{
 				{"utf-8", 1.0},
 				{"iso-8859-1", 0.8},
 			},
 		},
 		{
 			input: "*;q=0.5, utf-16;q=0.9",
-			expected: []AcceptCharset{
+			expected: []AcceptPart{
 				{"utf-16", 0.9},
 				{"*", 0.5},
 			},
@@ -1141,12 +1141,12 @@ func TestParseAcceptCharsetHeader(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := parseAcceptCharsetHeader(tt.input)
+			result := parseAcceptHeader(tt.input)
 			if len(result) != len(tt.expected) {
 				t.Fatalf("Expected %d charsets, got %d", len(tt.expected), len(result))
 			}
 			for i := range result {
-				if result[i].charset != tt.expected[i].charset || result[i].q != tt.expected[i].q {
+				if result[i].part != tt.expected[i].part || result[i].q != tt.expected[i].q {
 					t.Errorf("Position %d: Expected %v, got %v",
 						i, tt.expected[i], result[i])
 				}
@@ -1225,18 +1225,18 @@ func TestAcceptsEncodings(t *testing.T) {
 func TestParseAcceptEncodingHeader(t *testing.T) {
 	tests := []struct {
 		input    string
-		expected []AcceptsEncoding
+		expected []AcceptPart
 	}{
 		{
 			input: "gzip, deflate;q=0.5",
-			expected: []AcceptsEncoding{
+			expected: []AcceptPart{
 				{"gzip", 1.0},
 				{"deflate", 0.5},
 			},
 		},
 		{
 			input: "br;q=0.8, *;q=0.1",
-			expected: []AcceptsEncoding{
+			expected: []AcceptPart{
 				{"br", 0.8},
 				{"*", 0.1},
 			},
@@ -1245,12 +1245,12 @@ func TestParseAcceptEncodingHeader(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := parseAcceptEncodingHeader(tt.input)
+			result := parseAcceptHeader(tt.input)
 			if len(result) != len(tt.expected) {
 				t.Fatalf("Expected %d encodings, got %d", len(tt.expected), len(result))
 			}
 			for i := range result {
-				if result[i].encoding != tt.expected[i].encoding || result[i].q != tt.expected[i].q {
+				if result[i].part != tt.expected[i].part || result[i].q != tt.expected[i].q {
 					t.Errorf("Position %d: Expected %v, got %v",
 						i, tt.expected[i], result[i])
 				}

@@ -268,18 +268,22 @@ func (req *Req) Save(formFile *FormFile, destination string) error {
 }
 
 // Checks if the specified types are accepted from the HTTP client
-func (req *Req) Accepts(types ...string) string {
+func (req *Req) Accepts(offered ...string) string {
 	acceptHeader := req.Header("Accept")
 
-	if acceptHeader == "" || len(types) == 0 {
+	if acceptHeader == "" || len(offered) == 0 {
 		//TODO: Align with RFC standards
-		return types[0]
+		if len(offered) != 0 {
+			return offered[0]
+		} else {
+			return ""
+		}
 	}
 
 	clientTypes := parseAcceptHeader(acceptHeader)
 
 	for _, clientType := range clientTypes {
-		for _, offered := range types {
+		for _, offered := range offered {
 			if matches(clientType.part, offered) {
 				return offered
 			}
@@ -294,7 +298,11 @@ func (req *Req) AcceptsCharsets(offered ...string) string {
 	charsetHeader := req.Header("Accept-Charset")
 	if charsetHeader == "" {
 		//TODO: Align with RFC standards
-		return offered[0]
+		if len(offered) != 0 {
+			return offered[0]
+		} else {
+			return ""
+		}
 	}
 
 	clientCharsets := parseAcceptHeader(charsetHeader)
@@ -321,7 +329,11 @@ func (req *Req) AcceptsEncodings(offered ...string) string {
 	encodingsHeader := req.Header("Accept-Encoding")
 	if encodingsHeader == "" {
 		//TODO: Align with RFC standards
-		return offered[0]
+		if len(offered) != 0 {
+			return offered[0]
+		} else {
+			return ""
+		}
 	}
 
 	clientEncodings := parseAcceptHeader(encodingsHeader)
@@ -357,7 +369,11 @@ func (req *Req) AcceptsLanguages(offered ...string) string {
 	langHeader := req.Header("Accept-Language")
 	if langHeader == "" {
 		//TODO: Align with RFC standards
-		return offered[0]
+		if len(offered) != 0 {
+			return offered[0]
+		} else {
+			return ""
+		}
 	}
 
 	acceptedLangs := parseAcceptHeader(langHeader)

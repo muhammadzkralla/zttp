@@ -1258,3 +1258,96 @@ func TestParseAcceptEncodingHeader(t *testing.T) {
 		})
 	}
 }
+
+func TestAcceptsLanguages(t *testing.T) {
+	tests := []struct {
+		name     string
+		header   string
+		offered  []string
+		expected string
+	}{
+		{
+			name:     "Exact match",
+			header:   "en-US, fr;q=0.9",
+			offered:  []string{"fr", "en-US"},
+			expected: "en-US",
+		},
+		{
+			name:     "Primary language match",
+			header:   "en;q=0.8, fr",
+			offered:  []string{"fr-CA", "en-GB"},
+			expected: "fr-CA", // Matches primary "fr"
+		},
+		{
+			name:     "Quality precedence",
+			header:   "en;q=0.9, fr;q=0.8",
+			offered:  []string{"fr", "en"},
+			expected: "en",
+		},
+		{
+			name:     "Wildcard acceptance",
+			header:   "*, fr;q=0",
+			offered:  []string{"ja", "de"},
+			expected: "ja",
+		},
+		{
+			name:     "No match",
+			header:   "de-DE",
+			offered:  []string{"en", "fr"},
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := &Req{
+				Headers: map[string]string{
+					"Accept-Language": tt.header,
+				},
+			}
+			result := req.AcceptsLanguages(tt.offered...)
+			if result != tt.expected {
+				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestParseAcceptLanguages(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected []AcceptPart
+	}{
+		{
+			input: "en-us, fr;q=0.8",
+			expected: []AcceptPart{
+				{"en-us", 1.0},
+				{"fr", 0.8},
+			},
+		},
+		{
+			input: "zh-cn, zh-tw;q=0.7, *;q=0.1",
+			expected: []AcceptPart{
+				{"zh-cn", 1.0},
+				{"zh-tw", 0.7},
+				{"*", 0.1},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := parseAcceptHeader(tt.input)
+			if len(result) != len(tt.expected) {
+				t.Fatalf("Expected %d items, got %d", len(tt.expected), len(result))
+			}
+			for i := range result {
+				if result[i].part != tt.expected[i].part ||
+					result[i].q != tt.expected[i].q {
+					t.Errorf("Item %d mismatch: expected %v, got %v",
+						i, tt.expected[i], result[i])
+				}
+			}
+		})
+	}
+}

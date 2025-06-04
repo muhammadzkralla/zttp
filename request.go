@@ -353,6 +353,49 @@ func (req *Req) AcceptsEncodings(offered ...string) string {
 	return ""
 }
 
+func (req *Req) AcceptsLanguages(offered ...string) string {
+	langHeader := req.Header("Accept-Language")
+	if langHeader == "" {
+		//TODO: Align with RFC standards
+		return offered[0]
+	}
+
+	acceptedLangs := parseAcceptHeader(langHeader)
+
+	// Check for wildcard
+	for _, lang := range acceptedLangs {
+		if lang.part == "*" && lang.q > 0 {
+			return offered[0]
+		}
+	}
+
+	// Check exact match
+	for _, lang := range acceptedLangs {
+		for _, offeredLang := range offered {
+			if strings.EqualFold(lang.part, offeredLang) && lang.q > 0 {
+				return offeredLang
+			}
+		}
+	}
+
+	// Check primary language matches like `en` matches `en-US`
+	for _, lang := range acceptedLangs {
+		if lang.q == 0 {
+			continue
+		}
+
+		primaryLang := strings.Split(lang.part, "-")[0]
+		for _, offeredLang := range offered {
+			offeredPrimary := strings.Split(offeredLang, "-")[0]
+			if strings.EqualFold(primaryLang, offeredPrimary) {
+				return offeredLang
+			}
+		}
+	}
+
+	return ""
+}
+
 // Parse the `Accepts` HTTP client header and return a list of accepted types with their quality factors
 func parseAcceptHeader(header string) []AcceptPart {
 	var items []AcceptPart

@@ -7,8 +7,6 @@ import (
 
 // Test GET route matching
 func TestRouteMatching(t *testing.T) {
-	app := NewApp()
-
 	tests := []struct {
 		name     string
 		method   string
@@ -65,6 +63,8 @@ func TestRouteMatching(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			app := NewApp()
+
 			switch tt.method {
 			case "GET":
 				app.Get(tt.path, tt.handler)
@@ -88,8 +88,6 @@ func TestRouteMatching(t *testing.T) {
 
 // Test dynamic routing
 func TestDynamicRouting(t *testing.T) {
-	app := NewApp()
-
 	tests := []struct {
 		name     string
 		method   string
@@ -127,8 +125,11 @@ func TestDynamicRouting(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			app := NewApp()
 			tt.setup(app)
+
 			response := mockRequest(app, tt.method, tt.path, "")
+
 			if !strings.Contains(response, tt.expected) {
 				t.Errorf("Expected response to contain '%s', but got '%s'", tt.expected, response)
 			}
@@ -149,22 +150,18 @@ func TestNotFoundHandler(t *testing.T) {
 
 // Test creating a custom router
 func TestCustomRouter(t *testing.T) {
-	app := NewApp()
-
-	router := app.NewRouter("/api/v1")
-
 	tests := []struct {
 		name     string
 		method   string
 		path     string
-		setup    func()
+		setup    func(router *Router)
 		expected string
 	}{
 		{
 			name:   "GET from router",
 			method: "GET",
 			path:   "/api/v1/home",
-			setup: func() {
+			setup: func(router *Router) {
 				router.Get("/home", func(req *Req, res *Res) {
 					res.Status(200).Send("/api/v1/home get found")
 				})
@@ -175,7 +172,7 @@ func TestCustomRouter(t *testing.T) {
 			name:   "POST with params from router",
 			method: "POST",
 			path:   "/api/v1/home/123/comment/comment1",
-			setup: func() {
+			setup: func(router *Router) {
 				router.Post("/home/:postId/comment/:commentId", func(req *Req, res *Res) {
 					res.Status(201).Send("/api/v1/home post found with postId: " + req.Param("postId") + " and commentId: " + req.Param("commentId"))
 				})
@@ -186,7 +183,11 @@ func TestCustomRouter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.setup()
+			app := NewApp()
+
+			router := app.NewRouter("/api/v1")
+
+			tt.setup(router)
 			response := mockRequest(app, tt.method, tt.path, "")
 			if !strings.Contains(response, tt.expected) {
 				t.Errorf("Expected '%s', but got '%s'", tt.expected, response)

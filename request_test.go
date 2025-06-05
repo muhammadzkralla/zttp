@@ -223,7 +223,7 @@ func TestRequestQueries(t *testing.T) {
 			expected: "zkrallah",
 		},
 		{
-			name:     "Catrgory Query",
+			name:     "Category Query",
 			queries:  queries,
 			key:      "category",
 			expected: "admin",

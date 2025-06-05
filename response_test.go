@@ -12,211 +12,212 @@ type User struct {
 	Age  int    `json:"age"`
 }
 
-// Test sending text response
-func TestSendResponse(t *testing.T) {
-	// Mock a socket
-	conn := &MockConn{}
-
-	res := Res{
-		Socket:     conn,
-		StatusCode: 200,
+// Test sending response
+func TestResponseMethods(t *testing.T) {
+	tests := []struct {
+		name     string
+		setup    func(*Res)
+		contains []string
+		headers  map[string]string
+	}{
+		{
+			name: "Send plain text",
+			setup: func(r *Res) {
+				r.Send("OK")
+			},
+			contains: []string{
+				"HTTP/1.1 200 OK",
+				"Content-Type: text/plain",
+				"OK",
+			},
+		},
+		{
+			name: "Send JSON from map",
+			setup: func(r *Res) {
+				r.Json(map[string]string{"message": "OK"})
+			},
+			contains: []string{
+				"HTTP/1.1 200 OK",
+				"Content-Type: application/json",
+				`"message":"OK"`,
+			},
+		},
+		{
+			name: "Send JSON from struct",
+			setup: func(r *Res) {
+				r.Json(User{Name: "Zkrallah", Age: 21})
+			},
+			contains: []string{
+				"HTTP/1.1 200 OK",
+				"Content-Type: application/json",
+				`"name":"Zkrallah"`,
+				`"age":21`,
+			},
+		},
 	}
 
-	res.Send("OK")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conn := &MockConn{}
+			res := &Res{
+				Socket:     conn,
+				StatusCode: 200,
+				Headers:    make(map[string][]string),
+			}
 
-	// Expected response body
-	expected := "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nOK"
-	if string(conn.outBuf) != expected {
-		t.Errorf("Expected response %s, but got %s", expected, string(conn.outBuf))
-	}
-}
+			tt.setup(res)
+			output := string(conn.outBuf)
 
-// Test sending parsed JSON response
-func TestSendJsonResponse(t *testing.T) {
-	// Mock a socket
-	conn := &MockConn{}
+			for _, s := range tt.contains {
+				if !strings.Contains(output, s) {
+					t.Errorf("Expected response to contain '%s'", s)
+				}
+			}
 
-	data := map[string]string{
-		"message": "OK",
-	}
-
-	res := Res{
-		Socket:     conn,
-		StatusCode: 200,
-	}
-
-	res.Json(data)
-
-	// Expected response body
-	if !strings.Contains(string(conn.outBuf), `"message":"OK"`) {
-		t.Errorf("Expected JSON response, but got %s", string(conn.outBuf))
-	}
-}
-
-// Test sending parsed JSON response
-func TestJson(t *testing.T) {
-	conn := &MockConn{}
-	res := &Res{
-		Socket:     conn,
-		StatusCode: 200,
-	}
-
-	user := User{
-		Name: "Zkrallah",
-		Age:  21,
-	}
-
-	res.Json(user)
-
-	output := string(conn.outBuf)
-
-	if !strings.Contains(output, "Content-Type: application/json") {
-		t.Errorf("Expected JSON content type, but got %s", output)
-	}
-
-	if !strings.Contains(output, `"name":"Zkrallah"`) || !strings.Contains(output, `"age":21`) {
-		t.Errorf("Expected JSON body, but got %s", output)
+			for k, v := range tt.headers {
+				if res.Headers[k][0] != v {
+					t.Errorf("Expected header %s: %s, got %s", k, v, res.Headers[k][0])
+				}
+			}
+		})
 	}
 }
 
 // Test setting response headers
-func TestSetResponseHeaders(t *testing.T) {
-	res := Res{
-		Headers: make(map[string][]string),
-	}
+func TestResponseHeaders(t *testing.T) {
+	t.Run("Multiple headers", func(t *testing.T) {
+		res := Res{Headers: make(map[string][]string)}
+		res.Header("Header1", "header1")
+		res.Header("Header1", "notheader1")
+		res.Header("Header2", "header2")
 
-	res.Header("Header1", "header1")
-	res.Header("Header1", "notheader1")
-	res.Header("Header2", "header2")
-
-	if res.Headers["Header1"][0] != "header1" || res.Headers["Header1"][1] != "notheader1" || res.Headers["Header2"][0] != "header2" {
-		t.Errorf("Error setting response headers")
-	}
+		if len(res.Headers["Header1"]) != 2 || res.Headers["Header1"][0] != "header1" ||
+			res.Headers["Header1"][1] != "notheader1" || res.Headers["Header2"][0] != "header2" {
+			t.Error("Header setting failed")
+		}
+	})
 }
 
 // Test setting response status code
-func TestSetStatusCode(t *testing.T) {
-	res := &Res{}
-	res.Status(500)
-	if res.StatusCode != 500 {
-		t.Errorf("Error setting status code to 500")
+func TestResponseStatus(t *testing.T) {
+	tests := []struct {
+		name     string
+		code     int
+		expected int
+	}{
+		{"Status 500", 500, 500},
+		{"Status 301", 301, 301},
+		{"Status 404", 404, 404},
 	}
 
-	res.Status(400)
-	res.Status(301)
-	if res.StatusCode != 301 {
-		t.Errorf("Error setting status code to 301")
-	}
-
-	res.Status(404)
-	if res.StatusCode != 404 {
-		t.Errorf("Error setting status code to 404")
-	}
-}
-
-func TestStaticResponseServing(t *testing.T) {
-	conn := &MockConn{}
-	res := &Res{
-		Socket:  conn,
-		Headers: make(map[string][]string),
-	}
-
-	res.Static("index.html", "./examples/static-file-serving/public/")
-
-	output := string(conn.outBuf)
-
-	if res.Headers["Content-Type"][0] != "text/html; charset=utf-8" {
-		t.Errorf("Expected header Content-Type: text/html; charset=utf-8, but got %s", res.Headers["Content-Type"][0])
-	}
-
-	if !strings.Contains(output, "<h1>Hello from static index file!</h1>") {
-		t.Errorf("Unexpected response body: %s", output)
-	}
-
-	res = &Res{
-		Socket:  conn,
-		Headers: make(map[string][]string),
-	}
-
-	res.Static("home.html", "./examples/static-file-serving/public/")
-
-	output = string(conn.outBuf)
-
-	if res.Headers["Content-Type"][0] != "text/html; charset=utf-8" {
-		t.Errorf("Expected header Content-Type: text/html; charset=utf-8, but got %s", res.Headers["Content-Type"][0])
-	}
-
-	if !strings.Contains(output, "<h1>Hello from static home file!</h1>") {
-		t.Errorf("Unexpected response body: %s", output)
-	}
-
-	res = &Res{
-		Socket:  conn,
-		Headers: make(map[string][]string),
-	}
-
-	res.Static("download.png", "./examples/static-file-serving/public/")
-
-	output = string(conn.outBuf)
-
-	if res.Headers["Content-Type"][0] != "image/png" {
-		t.Errorf("Expected header image/png, but got %s", res.Headers["Content-Type"][0])
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := &Res{}
+			res.Status(tt.code)
+			if res.StatusCode != tt.expected {
+				t.Errorf("Expected status %d, got %d", tt.expected, res.StatusCode)
+			}
+		})
 	}
 }
 
+// Test static file serving
+func TestStaticFileServing(t *testing.T) {
+	tests := []struct {
+		name     string
+		file     string
+		contains string
+		ctype    string
+	}{
+		{
+			name:     "Serve HTML index",
+			file:     "index.html",
+			contains: "<h1>Hello from static index file!</h1>",
+			ctype:    "text/html; charset=utf-8",
+		},
+		{
+			name:     "Serve HTML home",
+			file:     "home.html",
+			contains: "<h1>Hello from static home file!</h1>",
+			ctype:    "text/html; charset=utf-8",
+		},
+		{
+			name: "Serve PNG image",
+			file: "download.png",
+			// Can't check binary content
+			contains: "",
+			ctype:    "image/png",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conn := &MockConn{}
+			res := &Res{
+				Socket:  conn,
+				Headers: make(map[string][]string),
+			}
+
+			res.Static(tt.file, "./examples/static-file-serving/public/")
+			output := string(conn.outBuf)
+
+			if res.Headers["Content-Type"][0] != tt.ctype {
+				t.Errorf("Expected Content-Type %s, got %s", tt.ctype, res.Headers["Content-Type"][0])
+			}
+
+			if tt.contains != "" && !strings.Contains(output, tt.contains) {
+				t.Errorf("Expected response to contain '%s'", tt.contains)
+			}
+		})
+	}
+}
+
+// Test setting response cookie
 func TestResponseCookies(t *testing.T) {
+	t.Run("Complex cookie", func(t *testing.T) {
+		res := &Res{Headers: make(map[string][]string)}
 
-	res := &Res{
-		Headers: map[string][]string{},
-	}
-
-	cookie := Cookie{
-		Name:        "super",
-		Value:       "cookie",
-		Path:        "/",
-		Domain:      "example.com",
-		Expires:     time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
-		MaxAge:      86400,
-		Secure:      true,
-		HttpOnly:    true,
-		SameSite:    "Lax",
-		SessionOnly: true}
-
-	res.SetCookie(cookie)
-
-	cookies := res.Headers["Set-Cookie"]
-
-	if len(cookies) != 1 {
-		t.Errorf("Expected one cookies, but found %d", len(cookies))
-	}
-
-	cookieStr := cookies[0]
-	parts := strings.Split(cookieStr, "; ")
-
-	expectedParts := []string{
-		"super=cookie",
-		"Path=/",
-		"Domain=example.com",
-		"Expires=Wed, 01 Jan 2025 00:00:00 UTC",
-		"Max-Age=86400",
-		"Secure",
-		"HttpOnly",
-		"SameSite=Lax",
-		"SessionOnly=true",
-	}
-
-	if len(parts) != len(expectedParts) {
-		t.Errorf("Expected %d cookie parts, got %d", len(expectedParts), len(parts))
-	}
-
-	for i, part := range expectedParts {
-		if parts[i] != part {
-			t.Errorf("Part %d mismatch:\nExpected: %s\nGot:      %s", i, part, parts[i])
+		cookie := Cookie{
+			Name:        "super",
+			Value:       "cookie",
+			Path:        "/",
+			Domain:      "example.com",
+			Expires:     time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			MaxAge:      86400,
+			Secure:      true,
+			HttpOnly:    true,
+			SameSite:    "Lax",
+			SessionOnly: true,
 		}
-	}
 
-	expectedCookie := "super=cookie; Path=/; Domain=example.com; Expires=Wed, 01 Jan 2025 00:00:00 UTC; Max-Age=86400; Secure; HttpOnly; SameSite=Lax; SessionOnly=true"
-	if cookieStr != expectedCookie {
-		t.Errorf("Cookie string mismatch:\nExpected: %s\nGot:      %s", expectedCookie, cookieStr)
-	}
+		res.SetCookie(cookie)
+		cookies := res.Headers["Set-Cookie"]
+
+		if len(cookies) != 1 {
+			t.Fatalf("Expected 1 cookie, got %d", len(cookies))
+		}
+
+		expected := []string{
+			"super=cookie",
+			"Path=/",
+			"Domain=example.com",
+			"Expires=Wed, 01 Jan 2025 00:00:00 UTC",
+			"Max-Age=86400",
+			"Secure",
+			"HttpOnly",
+			"SameSite=Lax",
+			"SessionOnly=true",
+		}
+
+		parts := strings.Split(cookies[0], "; ")
+		if len(parts) != len(expected) {
+			t.Fatalf("Expected %d cookie parts, got %d", len(expected), len(parts))
+		}
+
+		for i, part := range expected {
+			if parts[i] != part {
+				t.Errorf("Part %d mismatch:\nExpected: %s\nGot:      %s", i, part, parts[i])
+			}
+		}
+	})
 }

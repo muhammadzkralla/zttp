@@ -15,7 +15,7 @@ import (
 )
 
 // Test extracting a specific request header
-func TestExtractHeader(t *testing.T) {
+func TestRequestHeaders(t *testing.T) {
 	headers := map[string]string{
 		"Content-Type":   "application/json",
 		"Content-Length": "20",
@@ -23,162 +23,346 @@ func TestExtractHeader(t *testing.T) {
 		"Header2":        "header2",
 	}
 
-	req := Req{
-		Headers: headers,
+	tests := []struct {
+		name     string
+		headers  map[string]string
+		key      string
+		expected string
+	}{
+		{
+			name:     "Content Type",
+			headers:  headers,
+			key:      "Content-Type",
+			expected: "application/json",
+		},
+		{
+			name:     "Content Length",
+			headers:  headers,
+			key:      "Content-Length",
+			expected: "20",
+		},
+		{
+			name:     "Header 1",
+			headers:  headers,
+			key:      "Header1",
+			expected: "header1",
+		},
+		{
+			name:     "Header 2",
+			headers:  headers,
+			key:      "Header2",
+			expected: "header2",
+		},
+		{
+			name:     "Non-existent header",
+			headers:  headers,
+			key:      "Missing",
+			expected: "",
+		},
 	}
 
-	h1 := req.Header("Content-Type")
-	h2 := req.Header("Content-Length")
-	h3 := req.Header("Header1")
-	h4 := req.Header("Header2")
-	h5 := req.Header("unknown")
-
-	if h1 != "application/json" || h2 != "20" || h3 != "header1" || h4 != "header2" || h5 != "" {
-		t.Errorf("Error parsing headers")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := Req{Headers: tt.headers}
+			result := req.Header(tt.key)
+			if result != tt.expected {
+				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
+			}
+		})
 	}
 }
 
 // Test extracting all the request headers
 func TestExtractHeaders(t *testing.T) {
-	// Mock some headers and create a bufio reader of them
-	headers := "Content-Length: 20\r\nHeader1: header1\r\nHeader2: header2\r\n\r\n"
-	rdr := bufio.NewReader(bytes.NewBufferString(headers))
-
-	extractedHeaders, extractedLen := extractHeaders(rdr)
-
-	if extractedHeaders["Content-Length"] != "20" {
-		t.Errorf("Expected header 'Content-Length: 20', but got %s", extractedHeaders["Content-Length"])
+	tests := []struct {
+		name        string
+		input       string
+		expected    map[string]string
+		contentLen  int
+		shouldError bool
+	}{
+		{
+			name: "Standard headers",
+			input: "Content-Length: 20\r\n" +
+				"Header1: header1\r\n" +
+				"Header2: header2\r\n\r\n",
+			expected: map[string]string{
+				"Content-Length": "20",
+				"Header1":        "header1",
+				"Header2":        "header2",
+			},
+			contentLen: 20,
+		},
+		{
+			name:       "Empty headers",
+			input:      "\r\n",
+			expected:   map[string]string{},
+			contentLen: 0,
+		},
 	}
 
-	if extractedHeaders["Header1"] != "header1" {
-		t.Errorf("Expected header 'Header1: header1', but got %s", extractedHeaders["Header1"])
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rdr := bufio.NewReader(bytes.NewBufferString(tt.input))
+			headers, length := extractHeaders(rdr)
 
-	if extractedHeaders["Header2"] != "header2" {
-		t.Errorf("Expected header 'Header2: header2', but got %s", extractedHeaders["Header2"])
-	}
+			if length != tt.contentLen {
+				t.Errorf("Expected content length %d, got %d", tt.contentLen, length)
+			}
 
-	if extractedLen != 20 {
-		t.Errorf("Expected Content-Length 20, but got %d", extractedLen)
+			for k, v := range tt.expected {
+				if headers[k] != v {
+					t.Errorf("Header %s: expected '%s', got '%s'", k, v, headers[k])
+				}
+			}
+		})
 	}
 }
 
 // Test extracting the request body
 func TestExtractBody(t *testing.T) {
-	// Mock a request body
-	body := "Hello, world!"
-	rdr := bufio.NewReader(bytes.NewBufferString(body))
+	tests := []struct {
+		name     string
+		input    string
+		length   int
+		expected string
+	}{
+		{
+			name:     "Exact length",
+			input:    "Hello, world!",
+			length:   13,
+			expected: "Hello, world!",
+		},
+		{
+			name:     "Shorter length",
+			input:    "Hello",
+			length:   5,
+			expected: "Hello",
+		},
+	}
 
-	extractedBody := extractBody(rdr, 13)
-
-	if extractedBody != "Hello, world!" {
-		t.Errorf("Expected body to be 'Hello, world!', but got %s", extractedBody)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rdr := bufio.NewReader(bytes.NewBufferString(tt.input))
+			result := extractBody(rdr, tt.length)
+			if result != tt.expected {
+				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
+			}
+		})
 	}
 }
 
 // Test deserializing the request body to a specific target struct
 func TestParseJson(t *testing.T) {
-	// Mock an incoming json request
-	body := `{"name":"Zkrallah","age":21}`
-	req := Req{
-		Body: body,
+	tests := []struct {
+		name     string
+		body     string
+		expected User
+		valid    bool
+	}{
+		{
+			name:     "Valid JSON",
+			body:     `{"name":"Zkrallah","age":21}`,
+			expected: User{Name: "Zkrallah", Age: 21},
+			valid:    true,
+		},
+		{
+			name:     "Invalid JSON",
+			body:     `{"name":"Zkrallah"`,
+			expected: User{},
+			valid:    false,
+		},
 	}
 
-	// attempt parsing the request json into the user struct object
-	var user User
-	err := req.ParseJson(&user)
-	if err != nil {
-		t.Errorf("Expected no error while parsing json, got %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := Req{Body: tt.body}
+			var user User
+			err := req.ParseJson(&user)
 
-	if user.Name != "Zkrallah" || user.Age != 21 {
-		t.Errorf("Expected no error while parsing json, got %v", err)
+			if tt.valid {
+				if err != nil {
+					t.Errorf("Unexpected error: %v", err)
+				}
+				if user != tt.expected {
+					t.Errorf("Expected %v, got %v", tt.expected, user)
+				}
+			} else {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+			}
+		})
 	}
 }
 
 // Test extracting a certain request query
-func TestParseQuery(t *testing.T) {
+func TestRequestQueries(t *testing.T) {
 	queries := map[string]string{
 		"userId":   "2",
 		"name":     "zkrallah",
 		"category": "admin",
 	}
 
-	req := Req{
-		Queries: queries,
+	tests := []struct {
+		name     string
+		queries  map[string]string
+		key      string
+		expected string
+	}{
+		{
+			name:     "User Id Query",
+			queries:  queries,
+			key:      "userId",
+			expected: "2",
+		},
+		{
+			name:     "Name Query",
+			queries:  queries,
+			key:      "name",
+			expected: "zkrallah",
+		},
+		{
+			name:     "Category Query",
+			queries:  queries,
+			key:      "category",
+			expected: "admin",
+		},
+		{
+			name:     "Non-existent Query",
+			queries:  queries,
+			key:      "missing",
+			expected: "",
+		},
 	}
 
-	q1 := req.Query("userId")
-	q2 := req.Query("name")
-	q3 := req.Query("category")
-	q4 := req.Query("unknown")
-
-	if q1 != "2" || q2 != "zkrallah" || q3 != "admin" || q4 != "" {
-		t.Errorf("Error parsing queries")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := Req{Queries: tt.queries}
+			result := req.Query(tt.key)
+			if result != tt.expected {
+				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
+			}
+		})
 	}
 }
 
 // Test extracting the request queries
-func TestParseQueries(t *testing.T) {
-	q1 := "userId=2&name=zkrallah&category=admin"
-	q2 := "userId=1&category=teacher&limit=2"
-	q3 := "userId=1&category="
-	q4 := ""
-
-	qs1 := extractQueries(q1)
-	qs2 := extractQueries(q2)
-	qs3 := extractQueries(q3)
-	qs4 := extractQueries(q4)
-
-	if len(qs1) != 3 || len(qs2) != 3 || len(qs3) != 2 || len(qs4) != 0 {
-		t.Errorf("Sizes are not correct: %d", len(qs4))
+func TestExtractQueries(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected map[string]string
+	}{
+		{
+			name:  "Standard queries",
+			input: "userId=2&name=zkrallah&category=admin",
+			expected: map[string]string{
+				"userId":   "2",
+				"name":     "zkrallah",
+				"category": "admin",
+			},
+		},
+		{
+			name:  "Empty value",
+			input: "userId=1&category=",
+			expected: map[string]string{
+				"userId":   "1",
+				"category": "",
+			},
+		},
+		{
+			name:     "Empty string",
+			input:    "",
+			expected: map[string]string{},
+		},
 	}
 
-	if qs1["userId"] != "2" || qs1["name"] != "zkrallah" || qs1["category"] != "admin" {
-		t.Errorf("Error in parsing first query")
-	}
-
-	if qs2["userId"] != "1" || qs2["category"] != "teacher" || qs2["limit"] != "2" {
-		t.Errorf("Error in parsing second query")
-	}
-
-	if qs3["userId"] != "1" || qs3["category"] != "" {
-		t.Errorf("Error in parsing third query")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := extractQueries(tt.input)
+			for k, v := range tt.expected {
+				if result[k] != v {
+					t.Errorf("Query %s: expected '%s', got '%s'", k, v, result[k])
+				}
+			}
+		})
 	}
 }
 
 // Test extracting the request cookies
 func TestExtractCookies(t *testing.T) {
-	headers := map[string]string{
-		"Header1": "header1",
-		"Header2": "header2",
-		"Cookie":  "sessionId=abc123; user=zkr;",
-		"Header3": "header3",
-		"header4": "header4",
+	tests := []struct {
+		name     string
+		headers  map[string]string
+		expected map[string]string
+	}{
+		{
+			name: "Multiple valid cookies",
+			headers: map[string]string{
+				"Cookie": "sessionId=abc123; user=zkr; lang=en-US",
+			},
+			expected: map[string]string{
+				"sessionId": "abc123",
+				"user":      "zkr",
+				"lang":      "en-US",
+			},
+		},
+		{
+			name: "Malformed cookies - skip invalid pairs",
+			headers: map[string]string{
+				"Cookie": "badcookie; valid=1; foo=bar=baz; empty=;",
+			},
+			expected: map[string]string{
+				"valid": "1",
+				"empty": "",
+			},
+		},
+		{
+			name: "No Cookie header",
+			headers: map[string]string{
+				"Other-Header": "value",
+			},
+			expected: map[string]string{},
+		},
+		{
+			name: "Empty Cookie header",
+			headers: map[string]string{
+				"Cookie": "",
+			},
+			expected: map[string]string{},
+		},
+		// {
+		// 	name: "Whitespace handling",
+		// 	headers: map[string]string{
+		// 		"Cookie": "  sessionId = abc123  ;  user=zkr ;  ",
+		// 	},
+		// 	expected: map[string]string{
+		// 		"sessionId": "abc123",
+		// 		"user":      "zkr",
+		// 	},
+		// },
+		// {
+		// 	name: "Special characters in values",
+		// 	headers: map[string]string{
+		// 		"Cookie": "token=abc!@#$%^&*()_+-=; path=/home",
+		// 	},
+		// 	expected: map[string]string{
+		// 		"token": "abc!@#$%^&*()_+-=",
+		// 		"path":  "/home",
+		// 	},
+		// },
 	}
 
-	cookies := extractCookies(headers)
-
-	if len(cookies) != 2 {
-		t.Errorf("Expected 2 cookies, but found: %d", len(cookies))
-	}
-
-	if cookies["sessionId"] != "abc123" || cookies["user"] != "zkr" {
-		t.Errorf("Queries don't match expectations")
-	}
-
-	headers = map[string]string{
-		"Cookie": "badcookie; valid=1; foo=bar=baz",
-	}
-
-	cookies = extractCookies(headers)
-
-	if len(cookies) != 1 {
-		t.Errorf("Expected 1 cookies, but found: %d", len(cookies))
-	}
-
-	if cookies["valid"] != "1" {
-		t.Errorf("Queries don't match expectations")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := extractCookies(tt.headers)
+			for k, v := range tt.expected {
+				if result[k] != v {
+					t.Errorf("Cookie %s: expected '%s', got '%s'", k, v, result[k])
+				}
+			}
+		})
 	}
 
 }

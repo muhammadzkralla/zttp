@@ -31,19 +31,44 @@ func TestMiddleware(t *testing.T) {
 		res.Send("Handler: /api")
 	})
 
-	// Test /test
-	response1 := mockRequest(app, "GET", "/test", "")
-	if !strings.Contains(response1, "GlobalMiddleware") {
-		t.Errorf("Expected global middleware for /test, got: %s", response1)
-	}
-	if strings.Contains(response1, "ApiMiddleware") {
-		t.Errorf("Did not expect /api middleware for /test, got: %s", response1)
+	tests := []struct {
+		name             string
+		path             string
+		shouldContain    []string
+		shouldNotContain []string
+	}{
+		{
+			name:             "global middleware only",
+			path:             "/test",
+			shouldContain:    []string{"GlobalMiddleware", "Handler: /test"},
+			shouldNotContain: []string{"ApiMiddleware"},
+		},
+		{
+			name:             "both global and path-specific middleware",
+			path:             "/api",
+			shouldContain:    []string{"GlobalMiddleware", "ApiMiddleware", "Handler: /api"},
+			shouldNotContain: []string{},
+		},
 	}
 
-	// Test /api
-	response2 := mockRequest(app, "GET", "/api", "")
-	if !strings.Contains(response2, "GlobalMiddleware") || !strings.Contains(response2, "ApiMiddleware") {
-		t.Errorf("Expected both middlewares for /api, got: %s", response2)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := mockRequest(app, "GET", tt.path, "")
+
+			for _, expected := range tt.shouldContain {
+				if !strings.Contains(response, expected) {
+					t.Errorf("Expected response to contain '%s' for path '%s', got: %s",
+						expected, tt.path, response)
+				}
+			}
+
+			for _, unexpected := range tt.shouldNotContain {
+				if strings.Contains(response, unexpected) {
+					t.Errorf("Expected response NOT to contain '%s' for path '%s', got: %s",
+						unexpected, tt.path, response)
+				}
+			}
+		})
 	}
 }
 
@@ -73,18 +98,43 @@ func TestRouterMiddlewares(t *testing.T) {
 		res.Status(200).Send("")
 	})
 
-	response := mockRequest(app, "GET", "/api/v1/test", "")
-
-	// The first one should execute both middlewares
-	if !strings.Contains(response, "GlobalMiddleware") || !strings.Contains(response, "RouterMiddleware") {
-		t.Errorf("Expected both global and router middlewares to work, but found %s", response)
+	tests := []struct {
+		name             string
+		path             string
+		shouldContain    []string
+		shouldNotContain []string
+	}{
+		{
+			name:             "router with both middlewares",
+			path:             "/api/v1/test",
+			shouldContain:    []string{"GlobalMiddleware", "RouterMiddleware"},
+			shouldNotContain: []string{},
+		},
+		{
+			name:             "app route with only global middleware",
+			path:             "/test",
+			shouldContain:    []string{"GlobalMiddleware"},
+			shouldNotContain: []string{"RouterMiddleware"},
+		},
 	}
 
-	response = mockRequest(app, "GET", "/test", "")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := mockRequest(app, "GET", tt.path, "")
 
-	// The second one should just execute the global middleware
-	if !strings.Contains(response, "GlobalMiddleware") || strings.Contains(response, "RouterMiddleware") {
-		t.Errorf("Expected both global and router middlewares to work, but found %s", response)
+			for _, expected := range tt.shouldContain {
+				if !strings.Contains(response, expected) {
+					t.Errorf("Expected response to contain '%s' for path '%s', got: %s",
+						expected, tt.path, response)
+				}
+			}
+
+			for _, unexpected := range tt.shouldNotContain {
+				if strings.Contains(response, unexpected) {
+					t.Errorf("Expected response NOT to contain '%s' for path '%s', got: %s",
+						unexpected, tt.path, response)
+				}
+			}
+		})
 	}
-
 }

@@ -293,3 +293,37 @@ func TestVaryHeader(t *testing.T) {
 		})
 	}
 }
+
+func TestContentType(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"json", "application/json"},
+		{".json", "application/json"},
+		{"application/json", "application/json"},
+		{"html", "text/html; charset=utf-8"},
+		{".html", "text/html; charset=utf-8"},
+		{"text", "text/plain"},
+		{"application/xml", "application/xml"},
+		{"text/csv", "text/csv"},
+		{"image/png", "image/png"},
+		{"png", "image/png"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			res := &Res{
+				Headers:     make(map[string][]string),
+				ContentType: "",
+			}
+
+			res.Type(tt.input)
+
+			if res.ContentType != tt.expected {
+				t.Errorf("Expected %q, got %q",
+					tt.expected, res.ContentType)
+			}
+		})
+	}
+}

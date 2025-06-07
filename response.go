@@ -262,6 +262,28 @@ func (res *Res) Vary(fields ...string) {
 	return
 }
 
+// Sets the `Content-Type` HTTP response header to the MIME type specified
+// TODO: Add support for setting the charset
+func (res *Res) Type(contentType string) *Res {
+	if strings.HasPrefix(contentType, ".") {
+		contentType = strings.TrimPrefix(contentType, ".")
+	}
+	if !strings.Contains(contentType, "/") {
+		// Try to get the MIME type from extension
+		if mimeType := mime.TypeByExtension("." + contentType); mimeType != "" {
+			contentType = mimeType
+		} else if contentType != "text" {
+			// Fallback to text/ for unknown extensions
+			contentType = "text/" + contentType
+		} else {
+			contentType = "text/plain"
+		}
+	}
+
+	res.ContentType = contentType
+	return res
+}
+
 // Check if a certain string exists in a slice of strings
 func containString(slice []string, target string) bool {
 	return slices.Contains(slice, target)

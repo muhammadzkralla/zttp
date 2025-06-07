@@ -7,8 +7,11 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/textproto"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"time"
 )
 
@@ -214,6 +217,65 @@ func (res *Res) SetCookie(cookie Cookie) *Res {
 func (res *Res) Status(code int) *Res {
 	res.StatusCode = code
 	return res
+}
+
+// Sets the `Vary` HTTP response header
+func (res *Res) Vary(fields ...string) {
+	if len(fields) == 0 {
+		return
+	}
+
+	_, ok := res.Headers["Vary"]
+	if !ok {
+		res.Header("Vary", "")
+	}
+
+	// Either will be `` or `value` or `value_1, value_2, ..., value_n`
+	varyHeader := res.Headers["Vary"][0]
+	varyHeaderParts := strings.Split(varyHeader, ", ")
+
+	for i := range fields {
+		fields[i] = textproto.CanonicalMIMEHeaderKey(fields[i])
+	}
+
+	var newFields []string
+	for _, field := range fields {
+		if !containString(varyHeaderParts, field) {
+			newFields = append(newFields, field)
+		}
+	}
+	fields = newFields
+
+	fields = removeDuplicates(fields)
+	joinedFields := strings.Join(fields, ", ")
+
+	if strings.Compare(varyHeader, "") == 0 {
+		res.Headers["Vary"][0] = joinedFields
+	} else if joinedFields != "" {
+		res.Headers["Vary"][0] += ", " + joinedFields
+	}
+
+	return
+}
+
+// Check if a certain string exists in a slice of strings
+func containString(slice []string, target string) bool {
+	return slices.Contains(slice, target)
+}
+
+// Remove duplicates from a slice of strings
+func removeDuplicates(list []string) []string {
+	var result []string
+	visited := make(map[string]bool)
+
+	for _, val := range list {
+		if !visited[val] {
+			visited[val] = true
+			result = append(result, val)
+		}
+	}
+
+	return result
 }
 
 // Writes the response data into the client tcp socket's buffer

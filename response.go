@@ -238,6 +238,10 @@ func (res *Res) Vary(fields ...string) {
 		fields[i] = textproto.CanonicalMIMEHeaderKey(fields[i])
 	}
 
+	for i := range varyHeaderParts {
+		varyHeaderParts[i] = textproto.CanonicalMIMEHeaderKey(varyHeaderParts[i])
+	}
+
 	var newFields []string
 	for _, field := range fields {
 		if !containString(varyHeaderParts, field) {

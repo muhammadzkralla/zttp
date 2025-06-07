@@ -1,7 +1,6 @@
 package zttp
 
 import (
-	"log"
 	"strings"
 	"testing"
 	"time"

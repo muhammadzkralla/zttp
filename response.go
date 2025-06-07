@@ -253,7 +253,7 @@ func (res *Res) Vary(fields ...string) {
 	fields = removeDuplicates(fields)
 	joinedFields := strings.Join(fields, ", ")
 
-	if strings.Compare(varyHeader, "") == 0 {
+	if varyHeader == "" {
 		res.Headers["Vary"][0] = joinedFields
 	} else if joinedFields != "" {
 		res.Headers["Vary"][0] += ", " + joinedFields

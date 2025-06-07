@@ -271,12 +271,10 @@ func TestVaryHeader(t *testing.T) {
 
 			if tt.name == "Case obsolete" {
 				res.Vary("ACCEPT-Encoding", "ACCEPT-LANGUAGE")
-				log.Printf("Vary Header now is: %s", res.Headers["Vary"][0])
 			}
 
 			if tt.name == "Case append" {
 				res.Vary("Accept-Encoding")
-				log.Printf("Vary Header now is: %s", res.Headers["Vary"][0])
 			}
 
 			res.Vary(tt.fields...)

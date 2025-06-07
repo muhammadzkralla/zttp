@@ -1,6 +1,7 @@
 package zttp
 
 import (
+	"log"
 	"strings"
 	"testing"
 	"time"
@@ -220,4 +221,78 @@ func TestResponseCookies(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestVaryHeader(t *testing.T) {
+	tests := []struct {
+		name     string
+		fields   []string
+		expected string
+	}{
+		{
+			name:     "Single field",
+			fields:   []string{"Accept"},
+			expected: "Vary: Accept",
+		},
+		{
+			name:     "Multiple fields",
+			fields:   []string{"Accept-Encoding", "Accept-Language"},
+			expected: "Vary: Accept-Encoding, Accept-Language",
+		},
+		{
+			name:     "Duplicate fields",
+			fields:   []string{"Accept", "Accept", "User-Agent"},
+			expected: "Vary: Accept, User-Agent",
+		},
+		{
+			name:     "Case normalization",
+			fields:   []string{"accept-encoding", "ACCEPT-LANGUAGE"},
+			expected: "Vary: Accept-Encoding, Accept-Language",
+		},
+		{
+			name:     "Case append",
+			fields:   []string{"Accept-Encoding", "Accept-LANGUAGE"},
+			expected: "Vary: Accept-Encoding, Accept-Language",
+		},
+		{
+			name:     "Case obsolete",
+			fields:   []string{"Accept-ENCODING", "Accept-LANGUAGE"},
+			expected: "Vary: Accept-Encoding, Accept-Language",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conn := &MockConn{}
+			res := &Res{
+				Socket:  conn,
+				Headers: make(map[string][]string),
+			}
+
+			if tt.name == "Case obsolete" {
+				res.Vary("ACCEPT-Encoding", "ACCEPT-LANGUAGE")
+				log.Printf("Vary Header now is: %s", res.Headers["Vary"][0])
+			}
+
+			if tt.name == "Case append" {
+				res.Vary("Accept-Encoding")
+				log.Printf("Vary Header now is: %s", res.Headers["Vary"][0])
+			}
+
+			res.Vary(tt.fields...)
+
+			varyHeader, ok := res.Headers["Vary"]
+			if !ok {
+				t.Errorf("Vary Header Doesn't Exist.")
+			}
+
+			if len(varyHeader) != 1 {
+				t.Errorf("Expected Vary Header Length: %d, got %d", len(tt.fields), len(varyHeader))
+			}
+
+			if !strings.Contains(tt.expected, varyHeader[0]) {
+				t.Errorf("Expected Vary header %s, got: %s", tt.expected, varyHeader[0])
+			}
+		})
+	}
 }

@@ -268,6 +268,7 @@ func (req *Req) Save(formFile *FormFile, destination string) error {
 }
 
 // Checks if the specified types are accepted from the HTTP client
+// TODO: Fix Canonicalization
 func (req *Req) Accepts(offered ...string) string {
 	acceptHeader := req.Header("Accept")
 

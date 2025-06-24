@@ -38,13 +38,14 @@ type FormFile struct {
 }
 
 type Req struct {
-	Method  string
-	Path    string
-	Body    string
-	Headers map[string]string
-	Params  map[string]string
-	Queries map[string]string
-	Cookies map[string]string
+	HostName string
+	Method   string
+	Path     string
+	Body     string
+	Headers  map[string]string
+	Params   map[string]string
+	Queries  map[string]string
+	Cookies  map[string]string
 	*Ctx
 }
 
@@ -411,6 +412,44 @@ func (req *Req) AcceptsLanguages(offered ...string) string {
 	}
 
 	return ""
+}
+
+// TODO: Align with RFC 7239 standards
+func (req *Req) IP() string {
+	// First, try the `X-Forwarded-For` request header
+	xff := req.Header("X-Forwarded-For")
+	if xff != "" {
+		// Could be a list: client, proxy1, proxy2
+		parts := strings.Split(xff, ",")
+		ip := strings.TrimSpace(parts[0])
+		host, _, err := net.SplitHostPort(ip)
+		if err != nil {
+			return ip
+		}
+
+		return host
+	}
+
+	// Second, try the `X-Real-IP` request header
+	realIP := req.Header("X-Real-IP")
+	if realIP != "" {
+		ip := strings.TrimSpace(realIP)
+		host, _, err := net.SplitHostPort(ip)
+		if err != nil {
+			return ip
+		}
+
+		return host
+	}
+
+	// Fallback to the default request tcp socket local address
+	host, _, err := net.SplitHostPort(req.HostName)
+	if err != nil {
+		// If an error happened during the split, just return it with the port number
+		return req.HostName
+	}
+
+	return host
 }
 
 // Parse the `Accepts` HTTP client header and return a list of accepted types with their quality factors

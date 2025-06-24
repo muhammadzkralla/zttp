@@ -38,14 +38,14 @@ type FormFile struct {
 }
 
 type Req struct {
-	HostName string
-	Method   string
-	Path     string
-	Body     string
-	Headers  map[string]string
-	Params   map[string]string
-	Queries  map[string]string
-	Cookies  map[string]string
+	LocalAddress string
+	Method       string
+	Path         string
+	Body         string
+	Headers      map[string]string
+	Params       map[string]string
+	Queries      map[string]string
+	Cookies      map[string]string
 	*Ctx
 }
 
@@ -443,10 +443,10 @@ func (req *Req) IP() string {
 	}
 
 	// Fallback to the default request tcp socket local address
-	host, _, err := net.SplitHostPort(req.HostName)
+	host, _, err := net.SplitHostPort(req.LocalAddress)
 	if err != nil {
 		// If an error happened during the split, just return it with the port number
-		return req.HostName
+		return req.LocalAddress
 	}
 
 	return host

@@ -159,7 +159,14 @@ func handleClient(socket net.Conn, app *App) {
 
 		path := rawPath
 		queries := make(map[string]string)
-		hostName := socket.LocalAddr().String()
+
+		// Extract the local address carefully
+		// TODO: Separate and generate unit tests later
+		hostName := ""
+		addr := socket.LocalAddr()
+		if addr != nil {
+			hostName = addr.String()
+		}
 
 		// Extract queries, if exist
 		if strings.Contains(rawPath, "?") {
@@ -175,14 +182,14 @@ func handleClient(socket net.Conn, app *App) {
 		// Otherwise, send a 404 not found response
 		if handler != nil {
 			req := &Req{
-				HostName: hostName,
-				Method:  method,
-				Path:    path,
-				Body:    body,
-				Headers: headers,
-				Params:  params,
-				Queries: queries,
-				Cookies: cookies,
+				LocalAddress: hostName,
+				Method:       method,
+				Path:         path,
+				Body:         body,
+				Headers:      headers,
+				Params:       params,
+				Queries:      queries,
+				Cookies:      cookies,
 			}
 			res := &Res{
 				Socket:          socket,

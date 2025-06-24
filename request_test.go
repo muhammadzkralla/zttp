@@ -1539,7 +1539,7 @@ func TestIP(t *testing.T) {
 	tests := []struct {
 		name     string
 		headers  map[string]string
-		hostName string
+		localAddress string
 		expected string
 	}{
 		// X-Forwarded-For tests
@@ -1550,7 +1550,7 @@ func TestIP(t *testing.T) {
 			},
 			expected: "203.0.113.1",
 		},
-				{
+		{
 			name: "Single X-Forwarded-For IP (without port)",
 			headers: map[string]string{
 				"X-Forwarded-For": "203.0.113.1",
@@ -1585,7 +1585,7 @@ func TestIP(t *testing.T) {
 			headers: map[string]string{
 				"X-Real-IP": "203.0.113.1",
 			},
-			hostName: "192.168.1.1:8080",
+			localAddress: "192.168.1.1:8080",
 			expected: "203.0.113.1",
 		},
 		{
@@ -1599,17 +1599,17 @@ func TestIP(t *testing.T) {
 		// HostName fallback tests
 		{
 			name:     "HostName without port",
-			hostName: "203.0.113.1",
+			localAddress: "203.0.113.1",
 			expected: "203.0.113.1",
 		},
 		{
 			name:     "HostName with port",
-			hostName: "203.0.113.1:8080",
+			localAddress: "203.0.113.1:8080",
 			expected: "203.0.113.1",
 		},
 		{
 			name:     "HostName IPv6 with port",
-			hostName: "[2001:db8::1]:8080",
+			localAddress: "[2001:db8::1]:8080",
 			expected: "2001:db8::1",
 		},
 		// {
@@ -1642,8 +1642,8 @@ func TestIP(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := &Req{
-				Headers:  tt.headers,
-				HostName: tt.hostName,
+				Headers:      tt.headers,
+				LocalAddress: tt.localAddress,
 			}
 
 			result := req.IP()

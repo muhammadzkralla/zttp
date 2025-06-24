@@ -1535,3 +1535,121 @@ func TestParseAcceptLanguages(t *testing.T) {
 		})
 	}
 }
+func TestIP(t *testing.T) {
+	tests := []struct {
+		name     string
+		headers  map[string]string
+		hostName string
+		expected string
+	}{
+		// X-Forwarded-For tests
+		{
+			name: "Single X-Forwarded-For IP",
+			headers: map[string]string{
+				"X-Forwarded-For": "203.0.113.1:8080",
+			},
+			expected: "203.0.113.1",
+		},
+				{
+			name: "Single X-Forwarded-For IP (without port)",
+			headers: map[string]string{
+				"X-Forwarded-For": "203.0.113.1",
+			},
+			expected: "203.0.113.1",
+		},
+		{
+			name: "Multiple X-Forwarded-For IPs",
+			headers: map[string]string{
+				"X-Forwarded-For": "203.0.113.1:8080, 198.51.100.2:8080, 192.0.2.3:8080",
+			},
+			expected: "203.0.113.1",
+		},
+		{
+			name: "X-Forwarded-With spaces",
+			headers: map[string]string{
+				"X-Forwarded-For": "  203.0.113.1  ,  198.51.100.2  ",
+			},
+			expected: "203.0.113.1",
+		},
+		{
+			name: "Malformed X-Forwarded-For",
+			headers: map[string]string{
+				"X-Forwarded-For": "not.an.ip, 203.0.113.1",
+			},
+			expected: "not.an.ip",
+		},
+
+		// X-Real-IP tests
+		{
+			name: "X-Real-IP takes precedence over HostName",
+			headers: map[string]string{
+				"X-Real-IP": "203.0.113.1",
+			},
+			hostName: "192.168.1.1:8080",
+			expected: "203.0.113.1",
+		},
+		{
+			name: "X-Real-IP with port (should strip port)",
+			headers: map[string]string{
+				"X-Real-IP": "203.0.113.1:8080",
+			},
+			expected: "203.0.113.1",
+		},
+
+		// HostName fallback tests
+		{
+			name:     "HostName without port",
+			hostName: "203.0.113.1",
+			expected: "203.0.113.1",
+		},
+		{
+			name:     "HostName with port",
+			hostName: "203.0.113.1:8080",
+			expected: "203.0.113.1",
+		},
+		{
+			name:     "HostName IPv6 with port",
+			hostName: "[2001:db8::1]:8080",
+			expected: "2001:db8::1",
+		},
+		// {
+		// 	name:     "Malformed HostName",
+		// 	hostName: "not.an.ip:8080",
+		// 	expected: "not.an.ip:8080",
+		// },
+
+		// Edge cases
+		{
+			name:     "No headers, empty HostName",
+			expected: "",
+		},
+		{
+			name: "Empty X-Forwarded-For",
+			headers: map[string]string{
+				"X-Forwarded-For": "",
+			},
+			expected: "",
+		},
+		{
+			name: "X-Forwarded-For with empty elements",
+			headers: map[string]string{
+				"X-Forwarded-For": ", , 203.0.113.1, ",
+			},
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := &Req{
+				Headers:  tt.headers,
+				HostName: tt.hostName,
+			}
+
+			result := req.IP()
+			if result != tt.expected {
+				t.Errorf("Expected %q, got %q", tt.expected, result)
+			}
+		})
+	}
+}

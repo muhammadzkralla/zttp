@@ -186,7 +186,7 @@ func (res *Res) SetCookie(cookie Cookie) *Res {
 	if !cookie.Expires.IsZero() {
 		cookieStr += fmt.Sprintf("; Expires=%s", cookie.Expires.UTC().Format(time.RFC1123))
 	}
-	if cookie.MaxAge > 0 {
+	if cookie.MaxAge >= 0 {
 		cookieStr += fmt.Sprintf("; Max-Age=%d", cookie.MaxAge)
 	}
 	if cookie.Secure {
@@ -211,6 +211,40 @@ func (res *Res) SetCookie(cookie Cookie) *Res {
 	res.Header("Set-Cookie", cookieStr)
 
 	return res
+}
+
+// Clear the specified client cookies
+// If no keys are specified, all client cookies are cleared
+func (res *Res) ClearCookie(key ...string) {
+
+	// If no keys are specified, extract all the request cookies
+	// and add them to the `key` string slice
+	if len(key) == 0 {
+		cookies := res.Ctx.Req.Cookies
+
+		// No client cookies, do nothing
+		if len(cookies) == 0 {
+			return
+		}
+
+		// Append client cookies to the `key` slice
+		for k := range cookies {
+			key = append(key, k)
+		}
+	}
+
+	// Clear each cookie in the `key` string slice
+	for _, name := range key {
+		cookie := Cookie{
+			Name:    name,
+			Value:   "",
+			Path:    "/",
+			Expires: time.Unix(0, 0),
+			MaxAge:  0,
+		}
+
+		res.SetCookie(cookie)
+	}
 }
 
 // Sets the status code of the current response

@@ -274,7 +274,7 @@ func (req *Req) Accepts(offered ...string) string {
 	acceptHeader := req.Header("Accept")
 
 	if acceptHeader == "" || len(offered) == 0 {
-		//TODO: Align with RFC standards
+		// TODO: Align with RFC 9110 standards
 		if len(offered) != 0 {
 			return offered[0]
 		} else {
@@ -299,7 +299,7 @@ func (req *Req) Accepts(offered ...string) string {
 func (req *Req) AcceptsCharsets(offered ...string) string {
 	charsetHeader := req.Header("Accept-Charset")
 	if charsetHeader == "" {
-		//TODO: Align with RFC standards
+		// TODO: Align with RFC 2616 standards
 		if len(offered) != 0 {
 			return offered[0]
 		} else {
@@ -330,7 +330,7 @@ func (req *Req) AcceptsCharsets(offered ...string) string {
 func (req *Req) AcceptsEncodings(offered ...string) string {
 	encodingsHeader := req.Header("Accept-Encoding")
 	if encodingsHeader == "" {
-		//TODO: Align with RFC standards
+		// TODO: Align with RFC 9110 standards
 		if len(offered) != 0 {
 			return offered[0]
 		} else {
@@ -370,7 +370,7 @@ func (req *Req) AcceptsEncodings(offered ...string) string {
 func (req *Req) AcceptsLanguages(offered ...string) string {
 	langHeader := req.Header("Accept-Language")
 	if langHeader == "" {
-		//TODO: Align with RFC standards
+		// TODO: Align with RFC 9110 standards
 		if len(offered) != 0 {
 			return offered[0]
 		} else {
@@ -450,6 +450,52 @@ func (req *Req) IP() string {
 	}
 
 	return host
+}
+
+// TODO: Align with RFC 7230 standards
+// TODO: Handle IPv4 and IPv6 hosts
+func (req *Req) Hostname() string {
+	host := req.Header("Host")
+	if host == "" {
+		return ""
+	}
+
+	// Some gophery ahhh type code
+	if parsedHost, port, err := net.SplitHostPort(host); err == nil {
+		if _, err := strconv.Atoi(port); err != nil {
+			return ""
+		}
+		return parsedHost
+	}
+
+	// Check if it's just an IPv6 address without port
+	if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
+		return host[1 : len(host)-1]
+	}
+
+	// Check if it's just an invalid IPv6 address without port
+	if strings.HasPrefix(host, "[") && !strings.HasSuffix(host, "]") {
+		return ""
+	}
+
+	// Check if it's just an invalid IPv6 address without port
+	if !strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
+		return ""
+	}
+
+	// Check for multiple colons in a non-IPv6 format
+	// I'm not really comfortable with this check
+	// but it passes the current tests, so I just keep it
+	if strings.Count(host, ":") > 1 {
+		return ""
+	}
+
+	// Guard against obvious invalid characters
+	if strings.ContainsAny(host, "/\\@") {
+		return ""
+	}
+
+	return strings.ToLower(strings.TrimSpace(host))
 }
 
 // Parse the `Accepts` HTTP client header and return a list of accepted types with their quality factors

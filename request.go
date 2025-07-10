@@ -461,7 +461,10 @@ func (req *Req) Hostname() string {
 	}
 
 	// Some gophery ahhh type code
-	if parsedHost, _, err := net.SplitHostPort(host); err == nil {
+	if parsedHost, port, err := net.SplitHostPort(host); err == nil {
+		if _, err := strconv.Atoi(port); err != nil {
+			return ""
+		}
 		return parsedHost
 	}
 

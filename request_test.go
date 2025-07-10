@@ -1696,7 +1696,7 @@ func TestHostName(t *testing.T) {
 		{"IPv6 with port overflow", "[::1]:65536", "::1"},
 		{"Host with special char @", "example@com", ""},
 		{"Multiple colons malformed", "foo:bar:baz", ""},
-		{"Trailing colon no port", "example.com:", "example.com"},
+		{"Trailing colon no port", "example.com:", ""},
 		{"Just port", ":8080", ""},
 	}
 

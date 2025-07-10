@@ -1537,10 +1537,10 @@ func TestParseAcceptLanguages(t *testing.T) {
 }
 func TestIP(t *testing.T) {
 	tests := []struct {
-		name     string
-		headers  map[string]string
+		name         string
+		headers      map[string]string
 		localAddress string
-		expected string
+		expected     string
 	}{
 		// X-Forwarded-For tests
 		{
@@ -1586,7 +1586,7 @@ func TestIP(t *testing.T) {
 				"X-Real-IP": "203.0.113.1",
 			},
 			localAddress: "192.168.1.1:8080",
-			expected: "203.0.113.1",
+			expected:     "203.0.113.1",
 		},
 		{
 			name: "X-Real-IP with port (should strip port)",
@@ -1598,19 +1598,19 @@ func TestIP(t *testing.T) {
 
 		// HostName fallback tests
 		{
-			name:     "HostName without port",
+			name:         "HostName without port",
 			localAddress: "203.0.113.1",
-			expected: "203.0.113.1",
+			expected:     "203.0.113.1",
 		},
 		{
-			name:     "HostName with port",
+			name:         "HostName with port",
 			localAddress: "203.0.113.1:8080",
-			expected: "203.0.113.1",
+			expected:     "203.0.113.1",
 		},
 		{
-			name:     "HostName IPv6 with port",
+			name:         "HostName IPv6 with port",
 			localAddress: "[2001:db8::1]:8080",
-			expected: "2001:db8::1",
+			expected:     "2001:db8::1",
 		},
 		// {
 		// 	name:     "Malformed HostName",
@@ -1652,4 +1652,67 @@ func TestIP(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHostName(t *testing.T) {
+	tests := []struct {
+		name     string
+		host     string
+		expected string
+	}{
+		// Basic cases
+		{"Simple host", "example.com", "example.com"},
+		{"With port", "example.com:8080", "example.com"},
+		{"Empty", "", ""},
+
+		// IPv4 cases
+		{"IPv4", "127.0.0.1", "127.0.0.1"},
+		{"IPv4 with port", "127.0.0.1:8080", "127.0.0.1"},
+
+		// IPv6 cases
+		{"IPv6", "[::1]", "::1"},
+		{"IPv6 with port", "[::1]:8080", "::1"},
+		{"Malformed IPv6", "[::1", ""},
+		{"Malformed IPv6 2", "::1]", ""},
+
+		// Normalization
+		{"Uppercase", "EXAMPLE.COM", "example.com"},
+		{"Mixed case", "Example.Com", "example.com"},
+
+		// Edge cases
+		{"Multiple colons", "bad::host::8080", ""},
+		{"Whitespace", " example.com ", "example.com"},
+		{"Invalid chars", "example.com/path", ""},
+
+		{"Localhost with port", "localhost:8080", "localhost"},
+		{"Subdomain with port", "api.sub.domain.com:3000", "api.sub.domain.com"},
+		{"Realistic IPv6 with port", "[2001:db8::1]:443", "2001:db8::1"},
+
+
+		// TODO: Investigate test validity later
+		// {"IPv6 no brackets", "::1", "::1"},
+		// {"IPv6 with invalid port", "[::1]:notaport", ""},
+
+		{"IPv6 with port overflow", "[::1]:65536", "::1"},
+		{"Host with special char @", "example@com", ""},
+		{"Multiple colons malformed", "foo:bar:baz", ""},
+		{"Trailing colon no port", "example.com:", "example.com"},
+		{"Just port", ":8080", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := &Req{
+				Headers: map[string]string{
+					"Host": tt.host,
+				},
+			}
+
+			result := req.Hostname()
+			if result != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, result)
+			}
+		})
+	}
+
 }

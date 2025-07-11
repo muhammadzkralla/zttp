@@ -474,12 +474,7 @@ func (req *Req) Hostname() string {
 	}
 
 	// Check if it's just an invalid IPv6 address without port
-	if strings.HasPrefix(host, "[") && !strings.HasSuffix(host, "]") {
-		return ""
-	}
-
-	// Check if it's just an invalid IPv6 address without port
-	if !strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
+	if strings.HasPrefix(host, "[") != strings.HasSuffix(host, "]") {
 		return ""
 	}
 

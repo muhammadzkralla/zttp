@@ -2,7 +2,7 @@
 
 ## Introduction
 
-**ZTTP** is a minimal, zero-dependency, extremely fast backend framework written in Go, built directly over raw TCP sockets. Designed as a toy project for educational purposes, it draws inspiration from modern web frameworks like [Gofiber](https://gofiber.io) and [Express.js](https://expressjs.com).
+**ZTTP** is a minimal, zero-dependency, and extremely fast backend framework written in Go, built directly over raw TCP sockets. Designed as a toy project for educational purposes, it draws inspiration from modern web frameworks like [Gofiber](https://gofiber.io) and [Express.js](https://expressjs.com).
 
 This project follows the Front Controller design pattern, a widely adopted architectural approach in web frameworks such as [Spring Boot](https://spring.io), [Express.js](https://expressjs.com), and more.
 

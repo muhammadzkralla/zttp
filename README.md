@@ -25,7 +25,7 @@ To state some numbers, I tested the same routes and benchmarks with different fr
 - 10k RPS, 135 ms latency using Express.js (Node)
 - 1.7k RPS, 128 ms latency using Flask
 
-Benchmarks included different core numbers, time periods, routes, etc, **all on the same machine separately**, and those are the average values.
+Benchmarks included different core numbers, time periods, routes, etc, ***all on the same machine separately***, and those are the average values.
 
 ## Why ZTTP?
 

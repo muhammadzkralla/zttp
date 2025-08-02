@@ -182,6 +182,8 @@ res.SetCookie(zttp.Cookie{      // Set response cookie
     Value: "token",
     Expires: time.Now().Add(24*time.Hour)
 })
+
+res.ClearCookie("username")	// Clear the username cookie
 ```
 
 ### Static File Serving

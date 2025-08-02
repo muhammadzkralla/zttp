@@ -8,10 +8,10 @@ This project follows the Front Controller design pattern, a widely adopted archi
 
 All incoming TCP connections are funneled concurrently through a centralized request handling function `handleClient()`, which performs the following responsibilities:
 
-- Parses the HTTP request (method, path, params, queries, headers, body, cookies, etc.)
-- Extracts query parameters and dynamic route parameters
-- Matches the request to a registered route handler using method and path
-- Delegates the request to the matched handler with a unified request/response context
+- Parses the HTTP request (method, path, params, queries, headers, body, cookies, etc.).
+- Extracts query parameters and dynamic route parameters.
+- Matches the request to a registered route handler using method and path.
+- Delegates the request to the matched handler with a unified request/response context.
 - Centrally Manages errors, timeouts, middlewares, connection lifecycle, and more.
 
 By applying this pattern, the application enforces a clean separation of concerns, consistent request preprocessing, and centralized control over the request lifecycle. This design simplifies extensibility (e.g., adding middleware, authentication, logging) and improves maintainability as the application scales.
@@ -29,9 +29,9 @@ Benchmarks included different core numbers, time periods, routes, etc, ***all on
 
 ## Why ZTTP?
 
-ZTTP was created as a deep-dive into how web frameworks work under the hood. From TCP socket handling and HTTP parsing to request routing and middleware architecture. It is a hands-on exercise in systems-level web development using Go, with minimal abstractions.
+ZTTP was created as a deep-dive into how web frameworks work under the hood. From TCP socket handling and manual HTTP parsing to request routing and middleware architecture. It is a hands-on exercise in systems-level web development using Go, with minimal abstractions.
 
-I decided not to use any external HTTP engines, not even Go's `net/http` standard library, and handle all the logic from scratch starting from the TCP layer.
+I decided not to use any external HTTP engines, not even Go's `net/http` standard library, and handle all the logic from scratch starting from the TCP layer to gain maximum knowledge and experience.
 
 Everything in this project is perfectly aligned with the RFC standards and HTTP/1.1 structure, as I spent days reading the RFC standards specific to each feature before starting to implement it.
 

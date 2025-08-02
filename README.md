@@ -2,23 +2,35 @@
 
 ## Introduction
 
-**ZTTP** is a lightweight, zero-dependency backend framework written in Go, built directly over raw TCP sockets. Designed as a toy project for educational purposes, it draws inspiration from modern web frameworks like [Gofiber](https://gofiber.io) and [Express.js](https://expressjs.com).
+**ZTTP** is a minimal, zero-dependency, extremely fast backend framework written in Go, built directly over raw TCP sockets. Designed as a toy project for educational purposes, it draws inspiration from modern web frameworks like [Gofiber](https://gofiber.io) and [Express.js](https://expressjs.com).
 
-This project follows the Front Controller design pattern, a widely adopted architectural approach in web frameworks such as Express.js, Spring Boot, and more.
+This project follows the Front Controller design pattern, a widely adopted architectural approach in web frameworks such as [Spring Boot](https://spring.io), [Express.js](https://expressjs.com), and more.
 
-All incoming TCP connections are funneled concurrently through a centralized request handling function `handleClient`, which performs the following responsibilities:
+All incoming TCP connections are funneled concurrently through a centralized request handling function `handleClient()`, which performs the following responsibilities:
 
 - Parses the HTTP request (method, path, params, queries, headers, body, cookies, etc.)
 - Extracts query parameters and dynamic route parameters
 - Matches the request to a registered route handler using method and path
 - Delegates the request to the matched handler with a unified request/response context
-- Manages errors, timeouts, and connection lifecycle centrally
+- Centrally Manages errors, timeouts, middlewares, connection lifecycle, and more.
 
-By applying this pattern, the application enforces a clean separation of concerns, consistent request preprocessing, and centralized control over the request lifecycle. This design simplifies extensibility (e.g., adding middleware, authentication, logging) and improves maintainability as the application grows.
+By applying this pattern, the application enforces a clean separation of concerns, consistent request preprocessing, and centralized control over the request lifecycle. This design simplifies extensibility (e.g., adding middleware, authentication, logging) and improves maintainability as the application scales.
+
+To state some numbers, I tested the same routes and benchmarks with ZTTP, Express.js, and GoFiber using wrk:
+
+- 200k RPS on average using GoFiber
+- 135k RPS on average using ZTTP
+- 10k RPS on average using Express.js
+
+Benchmarks included different core numbers, time periods, routes, etc, **all on the same machine separately**, and those are the average values.
 
 ## Why ZTTP?
 
 ZTTP was created as a deep-dive into how web frameworks work under the hood. From TCP socket handling and HTTP parsing to request routing and middleware architecture. It is a hands-on exercise in systems-level web development using Go, with minimal abstractions.
+
+I decided not to use any external HTTP engines, not even Go's `net/http` standard library, and handle all the logic from scratch starting from the TCP layer.
+
+Everything in this project is perfectly aligned with the RFC standards and HTTP/1.1 structure, as I spent days reading the RFC standards specific to each feature before starting to implement it.
 
 Whether you're learning how the web works or exploring Go's networking capabilities, ZTTP is designed to be small enough to understand yet expressive enough to grow.
 
@@ -110,18 +122,36 @@ age := req.Query("age")           // age query
 ### Request Handling
 
 - Body parsing: `req.Body` (raw string)
+
+```go
+body := req.Body    // raw string request body
+```
+
 - JSON parsing:
+
 ```go
 // Parse request body into JSON and store the result in user variable
 var user User
 err := req.ParseJson(&user)
 ```
 - Form data & file uploads:
+
 ```go
 value := req.FormValue("field")     // Get `field` part from request
 file, err := req.FormFile("file")   // Get `file` part from request
 err = req.Save(file, "./uploads")   // Save file to disk in `./uploads` directory
 ```
+
+- Accept headers processing:
+
+```go
+log.Println(req.Accepts("html"))                         // "html"
+log.Println(req.AcceptsCharsets("utf-16", "iso-8859-1")) // "iso-8859-1"
+log.Println(req.AcceptsEncodings("compress", "br"))      // "compress"
+log.Println(req.AcceptsLanguages("en", "nl", "ru"))      // "nl"
+```
+
+And more request processing utilities.
 
 ### Response Handling
 
@@ -197,6 +227,7 @@ if req.Fresh() {
 
 - Automatic panic recovery
 - Manual error responses:
+
 ```go
 res.Status(400).Send("Bad request")
 ```

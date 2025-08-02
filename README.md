@@ -16,11 +16,14 @@ All incoming TCP connections are funneled concurrently through a centralized req
 
 By applying this pattern, the application enforces a clean separation of concerns, consistent request preprocessing, and centralized control over the request lifecycle. This design simplifies extensibility (e.g., adding middleware, authentication, logging) and improves maintainability as the application scales.
 
-To state some numbers, I tested the same routes and benchmarks with ZTTP, Express.js, and GoFiber using wrk:
+To state some numbers, I tested the same routes and benchmarks with different frameworks using wrk and took the average:
 
-- 200k RPS on average using GoFiber
-- 135k RPS on average using ZTTP
-- 10k RPS on average using Express.js
+- 300k RPS, 3.5 ms latency using GoFiber
+- 135k RPS, 8.7 ms latency using ZTTP
+- 67k RPS, 34 ms latency using Spring WebMVC
+- 55k RPS, 19 ms latency using Spring WebFlux
+- 10k RPS, 135 ms latency using Express.js (Node)
+- 1.7k RPS, 128 ms latency using Flask
 
 Benchmarks included different core numbers, time periods, routes, etc, **all on the same machine separately**, and those are the average values.
 
